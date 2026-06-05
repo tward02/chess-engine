@@ -1,0 +1,34 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '2.3.21'
+}
+
+group = 'com.tward'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+test {
+    useJUnitPlatform {
+        excludeTags("long")
+    }
+}
+
+tasks.register('longTest', Test) {
+    useJUnitPlatform {
+        includeTags 'long'
+    }
+}
+
+tasks.register('allTests', Test) {
+    useJUnitPlatform()
+}
