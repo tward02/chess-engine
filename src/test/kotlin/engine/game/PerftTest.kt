@@ -104,7 +104,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 1`() {
+    fun `test chessprogramming org position 3 depth 1`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -113,7 +113,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 2`() {
+    fun `test chessprogramming org position 3 depth 2`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -122,7 +122,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 3`() {
+    fun `test chessprogramming org position 3 depth 3`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -131,7 +131,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 4`() {
+    fun `test chessprogramming org position 3 depth 4`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -140,7 +140,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 5`() {
+    fun `test chessprogramming org position 3 depth 5`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -149,7 +149,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 3 depth 6`() {
+    fun `test chessprogramming org position 3 depth 6`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -159,7 +159,7 @@ class PerftTest {
 
     @Test
     @LongRunning
-    fun `test chess programming position 3 depth 7`() {
+    fun `test chessprogramming org position 3 depth 7`() {
         val fen = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -168,7 +168,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 depth 1`() {
+    fun `test chessprogramming org position 4 depth 1`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -177,7 +177,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 depth 2`() {
+    fun `test chessprogramming org position 4 depth 2`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -186,7 +186,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 depth 3`() {
+    fun `test chessprogramming org position 4 depth 3`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -195,7 +195,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 depth 4`() {
+    fun `test chessprogramming org position 4 depth 4`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -204,7 +204,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 depth 5`() {
+    fun `test chessprogramming org position 4 depth 5`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -214,7 +214,7 @@ class PerftTest {
 
     @Test
     @LongRunning
-    fun `test chess programming position 4 depth 6`() {
+    fun `test chessprogramming org position 4 depth 6`() {
         val fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -223,7 +223,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 reversed depth 1`() {
+    fun `test chessprogramming org position 4 reversed depth 1`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -232,7 +232,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 reversed depth 2`() {
+    fun `test chessprogramming org position 4 reversed depth 2`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -241,7 +241,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 reversed depth 3`() {
+    fun `test chessprogramming org position 4 reversed depth 3`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -250,7 +250,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 reversed depth 4`() {
+    fun `test chessprogramming org position 4 reversed depth 4`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -259,7 +259,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 4 reversed depth 5`() {
+    fun `test chessprogramming org position 4 reversed depth 5`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -269,7 +269,7 @@ class PerftTest {
 
     @Test
     @LongRunning
-    fun `test chess programming position 4 reversed depth 6`() {
+    fun `test chessprogramming org position 4 reversed depth 6`() {
         val fen = "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -278,7 +278,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 5 depth 1`() {
+    fun `test chessprogramming org position 5 depth 1`() {
         val fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -287,7 +287,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 5 depth 2`() {
+    fun `test chessprogramming org position 5 depth 2`() {
         val fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -296,7 +296,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 5 depth 3`() {
+    fun `test chessprogramming org position 5 depth 3`() {
         val fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -305,7 +305,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 5 depth 4`() {
+    fun `test chessprogramming org position 5 depth 4`() {
         val fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -315,7 +315,7 @@ class PerftTest {
 
     @Test
     @LongRunning
-    fun `test chess programming position 5 depth 5`() {
+    fun `test chessprogramming org position 5 depth 5`() {
         val fen = "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -324,7 +324,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 6 depth 1`() {
+    fun `test chessprogramming org position 6 depth 1`() {
         val fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -333,7 +333,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 6 depth 2`() {
+    fun `test chessprogramming org position 6 depth 2`() {
         val fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -342,7 +342,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 6 depth 3`() {
+    fun `test chessprogramming org position 6 depth 3`() {
         val fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -351,7 +351,7 @@ class PerftTest {
     }
 
     @Test
-    fun `test chess programming position 6 depth 4`() {
+    fun `test chessprogramming org position 6 depth 4`() {
         val fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
@@ -361,7 +361,7 @@ class PerftTest {
 
     @Test
     @LongRunning
-    fun `test chess programming position 6 depth 5`() {
+    fun `test chessprogramming org position 6 depth 5`() {
         val fen = "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
         val board = Board.fromFEN(fen)
         val generator = MoveGenerator(board)
