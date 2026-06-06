@@ -1,16 +1,25 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '2.3.21'
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.21'
+    id 'org.jetbrains.compose' version '1.9.0'
 }
 
 group = 'com.tward'
 version = '1.0-SNAPSHOT'
 
 repositories {
+    google()
     mavenCentral()
+    maven { url 'https://maven.pkg.jetbrains.space/public/p/compose/dev' }
 }
 
 dependencies {
+    implementation compose.desktop.currentOs
+
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
 }
 
 kotlin {
@@ -19,7 +28,7 @@ kotlin {
 
 test {
     useJUnitPlatform {
-        excludeTags("long")
+        excludeTags 'long'
     }
 }
 
@@ -31,4 +40,10 @@ tasks.register('longTest', Test) {
 
 tasks.register('allTests', Test) {
     useJUnitPlatform()
+}
+
+compose.desktop {
+    application {
+        mainClass = 'com.tward.MainKt'
+    }
 }

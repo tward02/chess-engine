@@ -1,16 +1,46 @@
 package com.tward
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-fun main() {
-    val name = "Kotlin"
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    println("Hello, " + name + "!")
+import androidx.compose.material.MaterialTheme
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import com.tward.engine.board.Board
+import com.tward.engine.game.ChessGame
+import com.tward.engine.game.ChessMatch
+import com.tward.engine.game.ClockManager
+import com.tward.engine.game.TimeControl
+import com.tward.engine.player.BotPlayer
+import com.tward.engine.player.HumanPlayer
+import com.tward.engine.player.bot.RandomBot
+import com.tward.ui.BoardView
 
-    for (i in 1..5) {
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        println("i = $i")
+fun main() = application {
+
+    val windowState = rememberWindowState(
+        size = DpSize(800.dp, 800.dp)
+    )
+
+    val board = Board()
+
+    board.setupStandardPosition()
+
+//    val match =
+//        ChessMatch(ChessGame(board), HumanPlayer(), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
+
+    val match =
+        ChessMatch(ChessGame(board), BotPlayer(RandomBot()), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
+
+    Window(
+        onCloseRequest = ::exitApplication,
+        state = windowState,
+        title = "Chess"
+    ) {
+
+        MaterialTheme {
+
+            BoardView(match)
+        }
     }
 }

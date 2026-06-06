@@ -18,6 +18,29 @@ data class Piece(var type: PieceType, var colour: Colour) {
 
         return char
     }
+
+    fun toUnicode(): String {
+
+        return when (colour) {
+            Colour.WHITE -> when (type) {
+                PieceType.KING -> "♔"
+                PieceType.QUEEN -> "♕"
+                PieceType.ROOK -> "♖"
+                PieceType.BISHOP -> "♗"
+                PieceType.KNIGHT -> "♘"
+                PieceType.PAWN -> "♙"
+            }
+
+            Colour.BLACK -> when (type) {
+                PieceType.KING -> "♚"
+                PieceType.QUEEN -> "♛"
+                PieceType.ROOK -> "♜"
+                PieceType.BISHOP -> "♝"
+                PieceType.KNIGHT -> "♞"
+                PieceType.PAWN -> "♟"
+            }
+        }
+    }
 }
 
 enum class PieceType {
