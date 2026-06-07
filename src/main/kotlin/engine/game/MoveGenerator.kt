@@ -285,7 +285,7 @@ class MoveGenerator(private val board: Board) {
         for (move in moves) {
             board.makeMove(move)
             val nodes = perft(depth - 1)
-            println("${move.from.toAlgebraic()}${move.to.toAlgebraic()}: $nodes")
+            println("${move.from}${move.to}: $nodes")
             board.undoMove(move)
         }
     }

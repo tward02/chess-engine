@@ -16,6 +16,9 @@ class Board {
     var blackCanCastleKingside: Boolean = true
     var blackCanCastleQueenside: Boolean = true
 
+    var halfMoveClock = 0
+    var fullMoveNumber = 0
+
     fun getPiece(square: Square): Piece? = grid[square.row][square.col]
 
     fun setPiece(square: Square, piece: Piece?) {
@@ -67,6 +70,8 @@ class Board {
         board.whiteCanCastleQueenside = whiteCanCastleQueenside
         board.blackCanCastleKingside = blackCanCastleKingside
         board.blackCanCastleQueenside = blackCanCastleQueenside
+        board.halfMoveClock = halfMoveClock
+        board.fullMoveNumber = fullMoveNumber
         return board
     }
 
@@ -107,6 +112,17 @@ class Board {
         }
 
         updateCastlingRights(move)
+
+        if (movingPiece?.type == PieceType.PAWN || move.capturedPiece != null) {
+            halfMoveClock = 0
+        } else {
+            halfMoveClock++
+        }
+
+        if (activeColour == Colour.BLACK) {
+            fullMoveNumber++
+        }
+
         activeColour = activeColour.opposite()
     }
 
@@ -160,8 +176,28 @@ class Board {
         throw IllegalStateException("Critical Error: $colour King is missing from the board!")
     }
 
-    fun toFEN(): String {
-        return toFEN(this)
+    fun toFEN(isFullFEN: Boolean = true): String {
+        return toFEN(this, isFullFEN)
+    }
+
+    fun getPieces(): List<Piece> {
+        return grid.flatten().filterNotNull()
+    }
+
+    //Note this will find the first piece of the given type and colour if there are multiple
+    fun findPiece(piece: Piece): Square? {
+        for (row in 0..7) {
+            for (col in 0..7) {
+
+                val foundPiece =
+                    getPiece(Square(col, row))
+
+                if (foundPiece != null && foundPiece.type == piece.type && foundPiece.colour == piece.colour) {
+                    return Square(col ,row)
+                }
+            }
+        }
+        return null
     }
 
     private fun updateCastlingRights(move: Move) {
@@ -206,7 +242,9 @@ class Board {
                 whiteCanCastleKingside,
                 whiteCanCastleQueenside,
                 blackCanCastleKingside,
-                blackCanCastleQueenside
+                blackCanCastleQueenside,
+                halfMoveClock,
+                fullMoveNumber
             )
         )
     }
@@ -218,9 +256,17 @@ class Board {
         whiteCanCastleQueenside = previousSate.whiteCanCastleQueenside
         blackCanCastleKingside = previousSate.blackCanCastleKingside
         blackCanCastleQueenside = previousSate.blackCanCastleQueenside
+        halfMoveClock = previousSate.halfMoveClock
+        fullMoveNumber = previousSate.fullMoveNumber
     }
 
     companion object {
+
+        fun getStartingBoard(): Board {
+            val board = Board()
+            board.setupStandardPosition()
+            return board
+        }
 
         fun fromFEN(fen: String): Board {
             val board = Board()
@@ -229,6 +275,8 @@ class Board {
             val activeColourChar = parts[1]
             val castlingRights = parts[2]
             val enPassantTargetSquare = parts[3]
+            val halfMoveClock = parts[4].toInt()
+            val fullMoveNumber = parts[5].toInt()
 
             var row = 0
             var col = 0
@@ -276,10 +324,13 @@ class Board {
                 board.enPassantTarget = null
             }
 
+            board.halfMoveClock = halfMoveClock
+            board.fullMoveNumber = fullMoveNumber
+
             return board
         }
 
-        fun toFEN(board:Board): String {
+        fun toFEN(board: Board, isFullFEN: Boolean = true): String {
             var fen = ""
 
             for (row in 0..7) {
@@ -314,10 +365,11 @@ class Board {
             if (board.blackCanCastleQueenside) castling.append("q")
             fen += (" ${castling.ifEmpty { "-" }}")
 
-            fen += (" ${board.enPassantTarget?.toAlgebraic() ?: "-"}")
+            fen += (" ${board.enPassantTarget?.toString() ?: "-"}")
 
-
-            fen += (" 0 1")
+            if (isFullFEN) {
+                fen += (" ${board.halfMoveClock} ${board.fullMoveNumber}")
+            }
 
             return fen
         }
@@ -330,5 +382,6 @@ data class BoardState(
     var whiteCanCastleQueenside: Boolean,
     var blackCanCastleKingside: Boolean,
     var blackCanCastleQueenside: Boolean,
-    val takenPieces: Set<Piece> = emptySet()
+    var halfMoveClock: Int,
+    var fullMoveNumber: Int
 )

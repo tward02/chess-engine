@@ -48,13 +48,21 @@ class ChessMatch(
     }
 
     fun checkGameOver() {
+
+        if (clockManager.whiteMillis <= 0) {
+            game.result = GameResult.BLACK_WIN
+        }
+
+        if (clockManager.blackMillis <= 0) {
+            game.result = GameResult.WHITE_WIN
+        }
+
         if (game.isGameOver()) {
             uiState = BoardUiState(gameResult = game.result)
         }
     }
 
-    //TODO implement draw logic and clock manager logic so that player loses when runs out of time
-    //TODO implement promotion logic for player
+
 
     fun makeMove(move: Move) {
 

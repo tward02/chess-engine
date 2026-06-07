@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tward.engine.board.Colour
 import com.tward.engine.board.Square
+import com.tward.engine.board.SquareType
 import com.tward.engine.game.ChessMatch
 import com.tward.engine.player.BotPlayer
 import kotlinx.coroutines.delay
@@ -63,6 +64,8 @@ fun BoardView(match: ChessMatch) {
                     val isLegalTarget =
                         square in match.uiState.legalTargets
 
+                    val type = square.getSquareType()
+
                     Box(
                         modifier = Modifier
                             .size(80.dp)
@@ -70,13 +73,12 @@ fun BoardView(match: ChessMatch) {
                                 when {
                                     isSelected -> Color.Yellow
                                     isLegalTarget -> Color.Green
-                                    (row + col) % 2 == 0 ->
+                                    type == SquareType.LIGHT ->
                                         Color(0xFFF0D9B5)
-
                                     else ->
                                         Color(0xFFB58863)
                                 }
-                            ).clickable {
+                            ).clickable(enabled = match.uiState.gameResult == null) {
 
                                 val selected =
                                     match.uiState.selectedSquare

@@ -3,8 +3,8 @@ package engine.game
 import com.tward.engine.board.Board
 import com.tward.engine.game.MoveGenerator
 import engine.LongRunning
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class PerftTest {
 

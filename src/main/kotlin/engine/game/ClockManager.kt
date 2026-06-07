@@ -13,10 +13,8 @@ class ClockManager(
 ) {
 
     var whiteMillis = control.initialMillis
-        private set
 
     var blackMillis = control.initialMillis
-        private set
 
     private var moveStarted = System.currentTimeMillis()
 

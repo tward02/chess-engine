@@ -30,16 +30,20 @@ test {
     useJUnitPlatform {
         excludeTags 'long'
     }
+
+    testLogging {
+        events "passed", "failed", "skipped"
+    }
 }
 
 tasks.register('longTest', Test) {
     useJUnitPlatform {
         includeTags 'long'
     }
-}
 
-tasks.register('allTests', Test) {
-    useJUnitPlatform()
+    testLogging {
+        events "passed", "failed", "skipped"
+    }
 }
 
 compose.desktop {

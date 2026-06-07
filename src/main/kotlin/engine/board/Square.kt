@@ -14,9 +14,11 @@ data class Square(val col: Int, val row: Int) {
         )
     }
 
-    fun toAlgebraic(): String {
-        val file = ('a' + col)
-        val rank = (8 - row)
-        return "$file$rank"
+    fun getSquareType(): SquareType {
+        return if ((col + row) % 2 == 0) SquareType.LIGHT else SquareType.DARK
     }
+}
+
+enum class SquareType {
+    LIGHT, DARK
 }
