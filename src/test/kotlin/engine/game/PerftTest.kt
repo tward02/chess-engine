@@ -2,7 +2,7 @@ package engine.game
 
 import com.tward.engine.board.Board
 import com.tward.engine.game.MoveGenerator
-import engine.LongRunning
+import utils.LongRunning
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 

@@ -41,6 +41,24 @@ data class Piece(var type: PieceType, var colour: Colour) {
             }
         }
     }
+
+    fun resourceName(): String {
+        val colour =
+            if (colour == Colour.WHITE) "w"
+            else "b"
+
+        val piece =
+            when (type) {
+                PieceType.PAWN -> "p"
+                PieceType.KNIGHT -> "n"
+                PieceType.BISHOP -> "b"
+                PieceType.ROOK -> "r"
+                PieceType.QUEEN -> "q"
+                PieceType.KING -> "k"
+            }
+
+        return "$colour$piece.svg.webp"
+    }
 }
 
 enum class PieceType {

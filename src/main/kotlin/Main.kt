@@ -26,11 +26,13 @@ fun main() = application {
 
     board.setupStandardPosition()
 
-//    val match =
-//        ChessMatch(ChessGame(board), HumanPlayer(), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
+//    val board = Board.fromFEN("8/P7/8/8/4k3/8/8/4K3 w - - 0 1")
 
     val match =
-        ChessMatch(ChessGame(board), BotPlayer(RandomBot()), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
+        ChessMatch(ChessGame(board), HumanPlayer(), BotPlayer(RandomBot()), ClockManager(TimeControl(60000000, 200)))
+
+//    val match =
+//        ChessMatch(ChessGame(board), BotPlayer(RandomBot()), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
 
     Window(
         onCloseRequest = ::exitApplication,

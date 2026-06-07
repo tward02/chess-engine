@@ -30,19 +30,27 @@ test {
     useJUnitPlatform {
         excludeTags 'long'
     }
-
-    testLogging {
-        events "passed", "failed", "skipped"
-    }
 }
 
 tasks.register('longTest', Test) {
-    useJUnitPlatform {
-        includeTags 'long'
-    }
+    description = 'Runs all tests including long tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    useJUnitPlatform()
+}
+
+tasks.withType(Test).configureEach {
 
     testLogging {
         events "passed", "failed", "skipped"
+        showStandardStreams = true
+    }
+
+    afterTest { descriptor, result ->
+        println "${descriptor.name} took ${result.endTime - result.startTime} ms"
     }
 }
 

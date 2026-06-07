@@ -1,34 +1,40 @@
 package com.tward.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
+import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.tward.engine.board.Colour
-import com.tward.engine.board.Square
-import com.tward.engine.board.SquareType
+import androidx.compose.ui.window.Dialog
+import com.tward.engine.board.*
 import com.tward.engine.game.ChessMatch
 import com.tward.engine.player.BotPlayer
 import kotlinx.coroutines.delay
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun BoardView(match: ChessMatch) {
 
     val version = match.moveVersion
+    val squareSize = 80
+
+    var optionalMoves by remember {
+        mutableStateOf<List<Move>>(emptyList())
+    }
 
     LaunchedEffect(match.game.board.activeColour) {
 
@@ -49,98 +55,197 @@ fun BoardView(match: ChessMatch) {
         }
     }
 
-    Column {
-        for (row in 0..7) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize().background(
+            Color(0xff2d6e1f)
+        )
+    ) {
 
-            Row {
+        Column {
+            for (row in 0..7) {
 
-                for (col in 0..7) {
+                Row {
 
-                    val square = Square(col, row)
-                    val piece = match.game.board.getPiece(square)
-                    val isSelected =
-                        match.uiState.selectedSquare == square
+                    for (col in 0..7) {
 
-                    val isLegalTarget =
-                        square in match.uiState.legalTargets
+                        val square = Square(col, row)
+                        val piece = match.game.board.getPiece(square)
+                        val isSelected =
+                            match.uiState.selectedSquare == square
 
-                    val type = square.getSquareType()
+                        val isLegalTarget =
+                            square in match.uiState.legalTargets
 
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(
-                                when {
-                                    isSelected -> Color.Yellow
-                                    isLegalTarget -> Color.Green
-                                    type == SquareType.LIGHT ->
-                                        Color(0xFFF0D9B5)
-                                    else ->
-                                        Color(0xFFB58863)
-                                }
-                            ).clickable(enabled = match.uiState.gameResult == null) {
+                        val type = square.getSquareType()
 
-                                val selected =
-                                    match.uiState.selectedSquare
+                        Box(
+                            modifier = Modifier
+                                .size(squareSize.dp)
+                                .background(
+                                    when {
+                                        isSelected -> Color.Yellow
+                                        isLegalTarget -> Color.Green
+                                        type == SquareType.LIGHT ->
+                                            Color(0xFFF0D9B5)
 
-                                if (selected == null) {
-
-                                    val piece =
-                                        match.game.board.getPiece(square)
-
-                                    if (
-                                        piece != null &&
-                                        piece.colour ==
-                                        match.game.board.activeColour
-                                    ) {
-                                        match.select(square)
+                                        else ->
+                                            Color(0xFFB58863)
                                     }
+                                ).clickable(enabled = match.uiState.gameResult == null) {
+                                    val selected =
+                                        match.uiState.selectedSquare
 
-                                } else {
+                                    if (selected == null) {
 
-                                    val move =
-                                        match.game
-                                            .legalMoves()
-                                            .firstOrNull {
-                                                it.from == selected &&
-                                                        it.to == square
-                                            }
+                                        val piece =
+                                            match.game.board.getPiece(square)
 
-                                    if (move != null) {
-                                        match.makeMove(move)
+                                        if (
+                                            piece != null &&
+                                            piece.colour ==
+                                            match.game.board.activeColour
+                                        ) {
+                                            match.select(square)
+                                        }
+
                                     } else {
-                                        match.clearSelection()
+
+                                        val moves =
+                                            match.game
+                                                .legalMoves()
+                                                .filter {
+                                                    it.from == selected &&
+                                                            it.to == square
+                                                }
+
+
+                                        if (moves.size == 1) {
+                                            match.makeMove(moves[0])
+                                        } else {
+                                            if (moves.isNotEmpty()) {
+                                                optionalMoves = moves.filter { it.promotionType != null }
+                                            } else {
+                                                match.clearSelection()
+                                            }
+                                        }
                                     }
-                                }
 
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
 
-                        Text(
-                            text = piece?.toUnicode() ?: "",
-                            fontSize = 40.sp
-                        )
+                            PieceView(piece)
+
+                        }
                     }
                 }
             }
-        }
 
-        if (match.uiState.gameResult != null) {
+            if (match.uiState.gameResult != null) {
 
+                AlertDialog(
+                    onDismissRequest = { },
+                    title = {
+                        Text(text = if (match.uiState.gameResult?.isDraw() ?: false) "Draw" else "Game Over")
+                    },
+                    text = {
+                        Text(text = match.uiState.gameResult?.toString() ?: "")
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                exitProcess(0)
+                            }
+                        ) {
+                            Text("Close Game")
+                        }
+                    })
+            }
 
-            AlertDialog(onDismissRequest = { }, text = {
-                Text(text = match.uiState.gameResult?.toString() ?: "")
-            }, confirmButton = {
-                TextButton(
-                    onClick = {
-                        exitProcess(0)
+            if (optionalMoves.isNotEmpty()) {
+
+                Dialog(onDismissRequest = {}) {
+
+                    Card(
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = 12.dp,
+                        backgroundColor = Color(0xFF2B2B2B),
+                        modifier = Modifier.width(420.dp)
+                    ) {
+
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+
+                            Text(
+                                text = "Choose Promotion",
+                                color = Color.White
+                            )
+
+                            Spacer(Modifier.height(20.dp))
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+
+                                val orderedMoves =
+                                    optionalMoves.sortedBy {
+                                        when (it.promotionType) {
+                                            PieceType.QUEEN -> 0
+                                            PieceType.ROOK -> 1
+                                            PieceType.BISHOP -> 2
+                                            PieceType.KNIGHT -> 3
+                                            else -> 99
+                                        }
+                                    }
+
+                                orderedMoves.forEach { move ->
+                                    var hovered by remember { mutableStateOf(false) }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (hovered)
+                                                    Color(0xFF505050)
+                                                else
+                                                    Color(0xFF3A3A3A)
+                                            )
+
+                                            .background(Color(0xFF3A3A3A))
+                                            .border(
+                                                2.dp,
+                                                Color(0xFF606060),
+                                                RoundedCornerShape(12.dp)
+                                            )
+                                            .clickable {
+                                                optionalMoves = emptyList()
+                                                match.makeMove(move)
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+
+                                        move.promotionType?.let { type ->
+
+                                            PieceView(
+                                                Piece(
+                                                    type,
+                                                    move.piece!!.colour
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                ) {
-                    Text("Close Game")
                 }
-            })
-
+            }
         }
     }
 }
