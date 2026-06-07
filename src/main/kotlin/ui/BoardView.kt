@@ -15,7 +15,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerMoveFilter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tward.engine.board.*
@@ -86,7 +85,6 @@ fun BoardView(match: ChessMatch) {
                                 .background(
                                     when {
                                         isSelected -> Color.Yellow
-                                        isLegalTarget -> Color.Green
                                         type == SquareType.LIGHT ->
                                             Color(0xFFF0D9B5)
 
@@ -135,9 +133,17 @@ fun BoardView(match: ChessMatch) {
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-
+                            if (isLegalTarget) {
+                                Box(
+                                    modifier = Modifier
+                                        .size((squareSize * 0.5f).dp)
+                                        .background(
+                                            Color.Gray.copy(alpha = 0.5f),
+                                            shape = androidx.compose.foundation.shape.CircleShape
+                                        )
+                                )
+                            }
                             PieceView(piece)
-
                         }
                     }
                 }
