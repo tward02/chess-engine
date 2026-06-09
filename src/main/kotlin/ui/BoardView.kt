@@ -18,8 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tward.engine.board.*
+import com.tward.engine.game.ChessGame
 import com.tward.engine.player.BotPlayer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -65,9 +69,15 @@ fun BoardView(match: ChessMatch) {
             delay(200.milliseconds)
 
             val move =
-                currentPlayer.bot.chooseMove(match.game)
+                withContext(Dispatchers.Default) {
 
-            playMoveSound()
+                    val searchGame =
+                        match.game.copy()
+
+                    currentPlayer.bot.chooseMove(searchGame)
+                }
+
+            playMoveSound(move)
             match.makeMove(move)
         }
     }
@@ -134,7 +144,7 @@ fun BoardView(match: ChessMatch) {
 
                                         val moves =
                                             match.game
-                                                .legalMoves()
+                                                .getLegalMoves()
                                                 .filter {
                                                     it.from == selected &&
                                                             it.to == square
@@ -142,7 +152,7 @@ fun BoardView(match: ChessMatch) {
 
 
                                         if (moves.size == 1) {
-                                            playMoveSound()
+                                            playMoveSound(moves[0])
                                             match.makeMove(moves[0])
                                         } else {
                                             if (moves.isNotEmpty()) {
@@ -254,7 +264,7 @@ fun BoardView(match: ChessMatch) {
                                             )
                                             .clickable {
                                                 optionalMoves = emptyList()
-                                                playMoveSound()
+                                                playMoveSound(move)
                                                 match.makeMove(move)
                                             },
                                         contentAlignment = Alignment.Center

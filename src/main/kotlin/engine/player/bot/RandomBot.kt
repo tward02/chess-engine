@@ -8,7 +8,7 @@ import kotlin.random.Random
 class RandomBot : ChessBot {
 
     override fun chooseMove(game: ChessGame): Move {
-        val legalMoves = game.legalMoves()
+        val legalMoves = game.getLegalMoves()
         if (legalMoves.isEmpty()) {
             throw IllegalStateException("Cannot move, in checkmate")
         }

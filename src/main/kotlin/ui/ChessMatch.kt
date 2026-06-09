@@ -34,7 +34,7 @@ class ChessMatch(
         if (game.isGameOver()) return
 
         val moves =
-            game.legalMoves()
+            game.getLegalMoves()
                 .filter { it.from == square }
 
         uiState =

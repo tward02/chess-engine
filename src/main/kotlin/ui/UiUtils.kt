@@ -1,13 +1,24 @@
 package com.tward.ui
 
+import com.tward.engine.board.Move
 import java.io.BufferedInputStream
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import kotlin.concurrent.thread
 
-fun playMoveSound() {
-    playSound("/sounds/move.wav")
+fun playMoveSound(move: Move) {
+    if (move.capturedPiece != null) {
+        playSound("/sounds/take.wav")
+    } else {
+        playSound("/sounds/move.wav")
+    }
 }
+
+fun playDoneSound() {
+    playSound("/sounds/done.mp3")
+}
+
+//TODO check sound
 
 fun playSound(resourcePath: String) {
     thread(isDaemon = true) {

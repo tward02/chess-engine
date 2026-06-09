@@ -59,9 +59,9 @@ class Board {
 
     fun copy(): Board {
         val board = Board()
-        board.grid.forEachIndexed { r, row ->
+        grid.forEachIndexed { r, row ->
             row.forEachIndexed { c, piece ->
-                board.grid[r][c] = piece?.copy()
+                board.grid[r][c] = if (piece == null) null else Piece(piece.type, piece.colour)
             }
         }
         board.activeColour = activeColour

@@ -9,9 +9,9 @@ class ChessGame(val board: Board) {
 
     var result: GameResult? = null
 
-    private val positionHistory = mutableListOf<String>()
+    private var positionHistory = mutableListOf<String>()
 
-    fun legalMoves(): List<Move> {
+    fun getLegalMoves(): List<Move> {
         return MoveGenerator(board).generateLegalMoves()
     }
 
@@ -24,14 +24,17 @@ class ChessGame(val board: Board) {
         positionHistory.add(board.toFEN(isFullFEN = false))
     }
 
+    fun undoMove(move: Move) {
+        board.undoMove(move)
+        positionHistory.removeLast()
+    }
+
     fun getGameResult(): GameResult? {
-        val legalMoves = legalMoves()
+        val legalMoves = getLegalMoves()
 
         if (legalMoves.isEmpty()) {
 
-            val kingSquare = board.findKing(board.activeColour)
-
-            val inCheck = MoveGenerator(board).isSquareAttacked(kingSquare, board.activeColour.opposite())
+            val inCheck = isInCheck(board.activeColour)
 
             return if (inCheck) {
                 if (board.activeColour == Colour.WHITE) {
@@ -84,6 +87,11 @@ class ChessGame(val board: Board) {
         return false
     }
 
+    fun isInCheck(colour: Colour): Boolean {
+        val kingSquare = board.findKing(colour)
+        return MoveGenerator(board).isSquareAttacked(kingSquare, colour.opposite())
+    }
+
     fun isFiftyMoveRule(): Boolean {
         return board.halfMoveClock >= 100
     }
@@ -108,6 +116,13 @@ class ChessGame(val board: Board) {
 
     fun findMove(from: String, to: String): Move? {
         return MoveGenerator(board).generateLegalMoves().firstOrNull { it.from.toString() == from && it.to.toString() == to }
+    }
+
+    fun copy(): ChessGame {
+        val game = ChessGame(board.copy())
+        game.positionHistory = positionHistory.toMutableList()
+        game.result = result
+        return game
     }
 }
 
