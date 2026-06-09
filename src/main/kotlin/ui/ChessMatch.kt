@@ -1,4 +1,4 @@
-package com.tward.engine.game
+package com.tward.ui
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.tward.engine.board.Move
 import com.tward.engine.board.Square
+import com.tward.engine.game.ChessGame
+import com.tward.engine.game.GameResult
 import com.tward.engine.player.Player
 
 data class BoardUiState(
@@ -50,14 +52,15 @@ class ChessMatch(
     fun checkGameOver() {
 
         if (clockManager.whiteMillis <= 0) {
-            game.result = GameResult.BLACK_WIN
+            game.result = GameResult.BLACK_TIME_WIN
         }
 
         if (clockManager.blackMillis <= 0) {
-            game.result = GameResult.WHITE_WIN
+            game.result = GameResult.WHITE_TIME_WIN
         }
 
         if (game.isGameOver()) {
+            clockManager.stopClock()
             uiState = BoardUiState(gameResult = game.result)
         }
     }

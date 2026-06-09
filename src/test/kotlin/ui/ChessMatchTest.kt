@@ -1,20 +1,20 @@
-package engine.game
+package ui
 
 import com.tward.engine.board.Board
 import com.tward.engine.board.Square
 import com.tward.engine.game.ChessGame
-import com.tward.engine.game.ChessMatch
-import com.tward.engine.game.ClockManager
 import com.tward.engine.game.GameResult
-import com.tward.engine.game.TimeControl
 import com.tward.engine.player.HumanPlayer
+import com.tward.ui.ChessMatch
+import com.tward.ui.ClockManager
+import com.tward.ui.TimeControl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class ChessMatchTests {
+class ChessMatchTest {
 
     @Test
     fun `select piece updates ui state`() {

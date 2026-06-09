@@ -115,12 +115,22 @@ enum class GameResult {
 
     WHITE_WIN {
         override fun toString(): String {
-            return "White Wins!"
+            return "White Wins by Checkmate!"
         }
     },
     BLACK_WIN {
         override fun toString(): String {
-            return "Black Wins!"
+            return "Black Wins by Checkmate!"
+        }
+    },
+    WHITE_TIME_WIN {
+        override fun toString(): String {
+            return "White Wins in Time!"
+        }
+    },
+    BLACK_TIME_WIN {
+        override fun toString(): String {
+            return "Black Wins on Time!"
         }
     },
     DRAW_STALEMATE {

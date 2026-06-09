@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tward.engine.board.*
-import com.tward.engine.game.ChessMatch
 import com.tward.engine.player.BotPlayer
 import kotlinx.coroutines.delay
 import kotlin.system.exitProcess
@@ -35,13 +34,31 @@ fun BoardView(match: ChessMatch) {
         mutableStateOf<List<Move>>(emptyList())
     }
 
+    var tick by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            tick = System.currentTimeMillis()
+            delay(100.milliseconds)
+        }
+    }
+
+    val whiteTime = remember(tick) {
+        match.clockManager.currentWhite()
+    }
+
+    val blackTime = remember(tick) {
+        match.clockManager.currentBlack()
+    }
+
     LaunchedEffect(match.game.board.activeColour) {
 
         val currentPlayer =
-            if (match.game.board.activeColour == Colour.WHITE)
+            if (match.game.board.activeColour == Colour.WHITE) {
                 match.whitePlayer
-            else
+            } else {
                 match.blackPlayer
+            }
 
         if (currentPlayer is BotPlayer && match.uiState.gameResult == null) {
 
@@ -50,6 +67,7 @@ fun BoardView(match: ChessMatch) {
             val move =
                 currentPlayer.bot.chooseMove(match.game)
 
+            playMoveSound()
             match.makeMove(move)
         }
     }
@@ -61,6 +79,10 @@ fun BoardView(match: ChessMatch) {
             Color(0xff2d6e1f)
         )
     ) {
+
+        ChessClock(blackTime)
+
+        Spacer(Modifier.height(12.dp))
 
         Column {
             for (row in 0..7) {
@@ -120,6 +142,7 @@ fun BoardView(match: ChessMatch) {
 
 
                                         if (moves.size == 1) {
+                                            playMoveSound()
                                             match.makeMove(moves[0])
                                         } else {
                                             if (moves.isNotEmpty()) {
@@ -231,6 +254,7 @@ fun BoardView(match: ChessMatch) {
                                             )
                                             .clickable {
                                                 optionalMoves = emptyList()
+                                                playMoveSound()
                                                 match.makeMove(move)
                                             },
                                         contentAlignment = Alignment.Center
@@ -253,5 +277,36 @@ fun BoardView(match: ChessMatch) {
                 }
             }
         }
+
+        Spacer(Modifier.height(12.dp))
+
+        ChessClock(whiteTime)
     }
+}
+
+@Composable
+fun ChessClock(millis: Long) {
+    Card(
+        backgroundColor = Color(0xFF1E1E1E)
+    ) {
+        Text(
+            text = formatClock(millis),
+            modifier = Modifier.padding(
+                horizontal = 20.dp,
+                vertical = 10.dp
+            ),
+            color = Color.White
+        )
+    }
+}
+
+fun formatClock(millis: Long): String {
+
+    val totalSeconds = (millis.coerceAtLeast(0) / 1000)
+
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val ms = (millis % 1000) / 100
+
+    return String.format("%d:%02d:%d", minutes, seconds, ms)
 }
