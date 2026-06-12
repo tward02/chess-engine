@@ -1,10 +1,12 @@
-package com.tward.ui
+package com.tward.ui.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.tward.engine.board.Colour
 import com.tward.engine.board.Move
+import com.tward.engine.board.Piece
 import com.tward.engine.board.Square
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
@@ -28,6 +30,22 @@ class ChessMatch(
 
     var moveVersion by mutableIntStateOf(0)
         private set
+
+    var animatingMove by mutableStateOf<Move?>(null)
+        private set
+
+    var capturedByWhite by mutableStateOf<List<Piece>>(emptyList())
+        private set
+
+    var capturedByBlack by mutableStateOf<List<Piece>>(emptyList())
+        private set
+
+    val isAnimating: Boolean
+        get() = animatingMove != null
+
+    fun onAnimationFinished() {
+        animatingMove = null
+    }
 
     fun select(square: Square) {
 
@@ -73,11 +91,23 @@ class ChessMatch(
 
         game.makeMove(move)
 
+        val captured = move.capturedPiece
+
+        if (captured != null) {
+            if (captured.colour == Colour.BLACK) {
+                capturedByWhite = capturedByWhite + captured
+            } else {
+                capturedByBlack = capturedByBlack + captured
+            }
+        }
+
         clockManager.onMovePlayed()
 
         moveVersion++
 
         clearSelection()
+
+        animatingMove = move
 
         checkGameOver()
     }

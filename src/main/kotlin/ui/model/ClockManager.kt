@@ -1,4 +1,4 @@
-package com.tward.ui
+package com.tward.ui.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf

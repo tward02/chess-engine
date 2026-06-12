@@ -9,16 +9,13 @@ import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
-import com.tward.ui.ChessMatch
-import com.tward.ui.ClockManager
-import com.tward.ui.TimeControl
+import com.tward.ui.model.ChessMatch
+import com.tward.ui.model.ClockManager
+import com.tward.ui.model.TimeControl
 import com.tward.engine.player.BotPlayer
-import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.bot.MiniMaxBot
-import com.tward.engine.player.bot.RandomBot
-import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.StandardEvaluator
-import com.tward.ui.BoardView
+import com.tward.ui.views.BoardView
 
 fun main() = application {
 
@@ -35,8 +32,8 @@ fun main() = application {
     val match =
         ChessMatch(
             ChessGame(board),
-            BotPlayer(MiniMaxBot(depth = 4, colour = Colour.WHITE, evaluator = StandardEvaluator())),
-            BotPlayer(MiniMaxBot(depth = 3, colour = Colour.BLACK, evaluator = StandardEvaluator())),
+            BotPlayer(MiniMaxBot(depth = 3, colour = Colour.WHITE, evaluator = StandardEvaluator())),
+            BotPlayer(MiniMaxBot(depth = 4, colour = Colour.BLACK, evaluator = StandardEvaluator())),
             ClockManager(TimeControl(300000, 200))
         )
 
@@ -51,7 +48,7 @@ fun main() = application {
 
         MaterialTheme {
 
-            BoardView(match)
+            BoardView(match, showEvaluationBar = true)
         }
     }
 }

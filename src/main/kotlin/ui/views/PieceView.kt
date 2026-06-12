@@ -1,4 +1,4 @@
-package com.tward.ui
+package com.tward.ui.views
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size

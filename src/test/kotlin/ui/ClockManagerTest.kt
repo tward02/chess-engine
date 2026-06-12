@@ -1,8 +1,8 @@
 package ui
 
 import com.tward.engine.board.Colour
-import com.tward.ui.ClockManager
-import com.tward.ui.TimeControl
+import com.tward.ui.model.ClockManager
+import com.tward.ui.model.TimeControl
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

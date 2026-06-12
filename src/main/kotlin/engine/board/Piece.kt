@@ -59,6 +59,17 @@ data class Piece(var type: PieceType, var colour: Colour) {
 
         return "$colour$piece.svg.webp"
     }
+
+    fun value(): Int {
+        return when (type) {
+            PieceType.PAWN -> 1
+            PieceType.KNIGHT -> 3
+            PieceType.BISHOP -> 3
+            PieceType.ROOK -> 5
+            PieceType.QUEEN -> 9
+            PieceType.KING -> 0
+        }
+    }
 }
 
 enum class PieceType {

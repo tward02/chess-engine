@@ -5,9 +5,9 @@ import com.tward.engine.board.Square
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.HumanPlayer
-import com.tward.ui.ChessMatch
-import com.tward.ui.ClockManager
-import com.tward.ui.TimeControl
+import com.tward.ui.model.ChessMatch
+import com.tward.ui.model.ClockManager
+import com.tward.ui.model.TimeControl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

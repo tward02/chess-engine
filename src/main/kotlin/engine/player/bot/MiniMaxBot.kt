@@ -42,8 +42,6 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
             }
         }
 
-        println("Best move score for ${colour}: $bestScore")
-
         return bestMove ?: game.getLegalMoves().first()
     }
 

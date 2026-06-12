@@ -6,8 +6,6 @@ import com.tward.engine.game.ChessGame
 
 class BasicEvaluator : Evaluator {
 
-    //TODO implement evaluator from old chess project
-
     override fun evaluate(game: ChessGame, depth: Int): Int {
 
         var score = 0
