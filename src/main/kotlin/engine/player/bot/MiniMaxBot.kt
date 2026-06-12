@@ -8,28 +8,37 @@ import com.tward.engine.player.ChessBot
 import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.Evaluator
 
+private const val CHECKMATE_SCORE = 100000
+
 class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = BasicEvaluator(), private val colour: Colour) : ChessBot {
 
     override fun chooseMove(game: ChessGame): Move {
 
+        val maximising = game.board.activeColour == Colour.WHITE
+
         var bestMove: Move? = null
-        var bestScore = Int.MIN_VALUE
+        var bestScore = if (maximising) Int.MIN_VALUE else Int.MAX_VALUE
+        var alpha = Int.MIN_VALUE
+        var beta = Int.MAX_VALUE
 
         for (move in game.getLegalMoves()) {
 
             game.makeMove(move)
-
-            val score =
-                -negamax(
-                    game,
-                    depth - 1
-                )
-
+            val score = minimax(game, depth - 1, alpha, beta, !maximising)
             game.undoMove(move)
 
-            if (score > bestScore) {
-                bestScore = score
-                bestMove = move
+            if (maximising) {
+                if (score > bestScore) {
+                    bestScore = score
+                    bestMove = move
+                }
+                alpha = maxOf(alpha, bestScore)
+            } else {
+                if (score < bestScore) {
+                    bestScore = score
+                    bestMove = move
+                }
+                beta = minOf(beta, bestScore)
             }
         }
 
@@ -38,20 +47,22 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         return bestMove ?: game.getLegalMoves().first()
     }
 
-    //TODO Try traditional minimax again
-
-    private fun negamax(
+    private fun minimax(
         game: ChessGame,
-        depth: Int
+        depth: Int,
+        alpha: Int,
+        beta: Int,
+        maximising: Boolean
     ): Int {
 
         val result = game.getGameResult()
 
         if (result != null) {
-            return if (result.isDraw()) {
-                0
-            } else {
-                -(100000 - depth)
+            // Add the remaining depth so mates found earlier in the search score better
+            return when {
+                result.isDraw() -> 0
+                result == GameResult.WHITE_WIN -> CHECKMATE_SCORE + depth
+                else -> -(CHECKMATE_SCORE + depth)
             }
         }
 
@@ -59,23 +70,43 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
             return evaluator.evaluate(game, depth)
         }
 
-        var best = Int.MIN_VALUE
+        var currentAlpha = alpha
+        var currentBeta = beta
 
-        for (move in game.getLegalMoves()) {
+        if (maximising) {
+            var best = Int.MIN_VALUE
 
-            game.makeMove(move)
+            for (move in game.getLegalMoves()) {
+                game.makeMove(move)
+                val score = minimax(game, depth - 1, currentAlpha, currentBeta, false)
+                game.undoMove(move)
 
-            val score =
-                -negamax(
-                    game,
-                    depth - 1
-                )
+                best = maxOf(best, score)
+                currentAlpha = maxOf(currentAlpha, best)
 
-            game.undoMove(move)
+                if (currentBeta <= currentAlpha) {
+                    break
+                }
+            }
 
-            best = maxOf(best, score)
+            return best
+        } else {
+            var best = Int.MAX_VALUE
+
+            for (move in game.getLegalMoves()) {
+                game.makeMove(move)
+                val score = minimax(game, depth - 1, currentAlpha, currentBeta, true)
+                game.undoMove(move)
+
+                best = minOf(best, score)
+                currentBeta = minOf(currentBeta, best)
+
+                if (currentBeta <= currentAlpha) {
+                    break
+                }
+            }
+
+            return best
         }
-
-        return best
     }
 }

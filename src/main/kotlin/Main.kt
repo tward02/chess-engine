@@ -35,7 +35,7 @@ fun main() = application {
     val match =
         ChessMatch(
             ChessGame(board),
-            BotPlayer(MiniMaxBot(depth = 3, colour = Colour.WHITE, evaluator = StandardEvaluator())),
+            BotPlayer(MiniMaxBot(depth = 4, colour = Colour.WHITE, evaluator = StandardEvaluator())),
             BotPlayer(MiniMaxBot(depth = 3, colour = Colour.BLACK, evaluator = StandardEvaluator())),
             ClockManager(TimeControl(300000, 200))
         )

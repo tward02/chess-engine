@@ -31,10 +31,7 @@ class BasicEvaluator : Evaluator {
             }
         }
 
-        return if (game.board.activeColour == Colour.WHITE) {
-            score
-        } else {
-            -score
-        }
+        // Score is always from White's perspective: positive favours White, negative favours Black
+        return score
     }
 }

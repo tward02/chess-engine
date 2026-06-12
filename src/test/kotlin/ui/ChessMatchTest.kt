@@ -191,7 +191,7 @@ class ChessMatchTest {
         match.checkGameOver()
 
         assertEquals(
-            GameResult.BLACK_WIN,
+            GameResult.BLACK_TIME_WIN,
             match.game.result
         )
     }
@@ -206,7 +206,7 @@ class ChessMatchTest {
         match.checkGameOver()
 
         assertEquals(
-            GameResult.WHITE_WIN,
+            GameResult.WHITE_TIME_WIN,
             match.game.result
         )
     }

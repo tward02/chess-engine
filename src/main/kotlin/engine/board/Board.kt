@@ -16,6 +16,9 @@ class Board {
     var blackCanCastleKingside: Boolean = true
     var blackCanCastleQueenside: Boolean = true
 
+    var whiteHasCastled: Boolean = false
+    var blackHasCastled: Boolean = false
+
     var halfMoveClock = 0
     var fullMoveNumber = 0
 
@@ -47,6 +50,8 @@ class Board {
         whiteCanCastleQueenside = true
         blackCanCastleKingside = true
         blackCanCastleQueenside = true
+        whiteHasCastled = false
+        blackHasCastled = false
     }
 
     fun clearBoard() {
@@ -70,6 +75,8 @@ class Board {
         board.whiteCanCastleQueenside = whiteCanCastleQueenside
         board.blackCanCastleKingside = blackCanCastleKingside
         board.blackCanCastleQueenside = blackCanCastleQueenside
+        board.whiteHasCastled = whiteHasCastled
+        board.blackHasCastled = blackHasCastled
         board.halfMoveClock = halfMoveClock
         board.fullMoveNumber = fullMoveNumber
         return board
@@ -108,6 +115,12 @@ class Board {
             } else if (move.to.col == 2) {
                 setPiece(Square(3, row), getPiece(Square(0, row)))
                 setPiece(Square(0, row), null)
+            }
+
+            if (movingPiece?.colour == Colour.WHITE) {
+                whiteHasCastled = true
+            } else {
+                blackHasCastled = true
             }
         }
 
@@ -184,6 +197,20 @@ class Board {
         return grid.flatten().filterNotNull()
     }
 
+    fun getPiecesWithSquares(): List<Pair<Square, Piece>> {
+        val pieces = mutableListOf<Pair<Square, Piece>>()
+        for (row in 0..7) {
+            for (col in 0..7) {
+                val square = Square(col, row)
+                val piece = getPiece(square)
+                if (piece != null) {
+                    pieces.add(square to piece)
+                }
+            }
+        }
+        return pieces
+    }
+
     //Note this will find the first piece of the given type and colour if there are multiple
     fun findPiece(piece: Piece): Square? {
         for (row in 0..7) {
@@ -243,6 +270,8 @@ class Board {
                 whiteCanCastleQueenside,
                 blackCanCastleKingside,
                 blackCanCastleQueenside,
+                whiteHasCastled,
+                blackHasCastled,
                 halfMoveClock,
                 fullMoveNumber
             )
@@ -256,6 +285,8 @@ class Board {
         whiteCanCastleQueenside = previousSate.whiteCanCastleQueenside
         blackCanCastleKingside = previousSate.blackCanCastleKingside
         blackCanCastleQueenside = previousSate.blackCanCastleQueenside
+        whiteHasCastled = previousSate.whiteHasCastled
+        blackHasCastled = previousSate.blackHasCastled
         halfMoveClock = previousSate.halfMoveClock
         fullMoveNumber = previousSate.fullMoveNumber
     }
@@ -382,6 +413,8 @@ data class BoardState(
     var whiteCanCastleQueenside: Boolean,
     var blackCanCastleKingside: Boolean,
     var blackCanCastleQueenside: Boolean,
+    var whiteHasCastled: Boolean,
+    var blackHasCastled: Boolean,
     var halfMoveClock: Int,
     var fullMoveNumber: Int
 )
