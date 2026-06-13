@@ -20,6 +20,7 @@ dependencies {
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testImplementation compose.desktop.uiTestJUnit4
 }
 
 kotlin {
@@ -56,6 +57,7 @@ tasks.withType(Test).configureEach {
 
 compose.desktop {
     application {
-        mainClass = 'com.tward.MainKt'
+        // Default run target. Switch to 'com.tward.app.TournamentAppKt' to run the tournament.
+        mainClass = 'com.tward.app.GameAppKt'
     }
 }

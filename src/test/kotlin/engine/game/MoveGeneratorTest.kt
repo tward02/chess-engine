@@ -66,4 +66,51 @@ class MoveGeneratorTest {
         val canMoveToD2 = moves.any { it.to == Square(3, 6) }
         assertFalse(canMoveToD2, "King should not be able to move to d2 (attacked by Rook on e2)")
     }
+
+    @Test
+    fun `both castling moves are generated when available`() {
+        val moves = getLegalMoves("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+
+        assertTrue(
+            moves.any { it.isCastling && it.to == Square(6, 7) },
+            "White should be able to castle kingside"
+        )
+        assertTrue(
+            moves.any { it.isCastling && it.to == Square(2, 7) },
+            "White should be able to castle queenside"
+        )
+    }
+
+    @Test
+    fun `cannot castle when a square between king and rook is occupied`() {
+        // A bishop on f1 blocks the kingside castle
+        val moves = getLegalMoves("r3k2r/8/8/8/8/8/8/R3KB1R w KQkq - 0 1")
+
+        assertFalse(
+            moves.any { it.isCastling && it.to == Square(6, 7) },
+            "White cannot castle kingside through the bishop on f1"
+        )
+    }
+
+    @Test
+    fun `cannot castle out of check`() {
+        // Black rook on e8 checks the white king down the e-file
+        val moves = getLegalMoves("4r3/8/8/8/8/8/8/R3K2R w KQ - 0 1")
+
+        assertFalse(
+            moves.any { it.isCastling },
+            "White cannot castle while in check"
+        )
+    }
+
+    @Test
+    fun `cannot castle through an attacked square`() {
+        // Black rook on f8 attacks f1, the square the king passes over when castling kingside
+        val moves = getLegalMoves("5r2/8/8/8/8/8/8/R3K2R w KQ - 0 1")
+
+        assertFalse(
+            moves.any { it.isCastling && it.to == Square(6, 7) },
+            "White cannot castle kingside through the attacked f1 square"
+        )
+    }
 }

@@ -183,6 +183,27 @@ enum class GameResult {
         override fun toString(): String {
             return "Threefold Repetition"
         }
+    },
+    DRAW_AGREED {
+        override fun isDraw(): Boolean {
+            return true
+        }
+
+        override fun toString(): String {
+            return "Draw agreed between players"
+        }
+    },
+    WHITE_RESIGNATION {
+        //Black win
+        override fun toString(): String {
+            return "White Resigned"
+        }
+    },
+    BLACK_RESIGNATION {
+        //White win
+        override fun toString(): String {
+            return "Black Resigned"
+        }
     };
 
     open fun isDraw(): Boolean {

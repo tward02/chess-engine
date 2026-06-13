@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tward.engine.board.*
+import com.tward.engine.game.GameResult
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.evaluator.StandardEvaluator
@@ -41,7 +42,13 @@ const val BOARD_SIZE = SQUARE_SIZE * 8
 private const val MOVE_ANIMATION_MILLIS = 200
 
 @Composable
-fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false, showLegalMoves: Boolean = true) {
+fun BoardView(
+    match: ChessMatch,
+    showEvaluationBar: Boolean = false,
+    showLegalMoves: Boolean = true,
+    showResultDialog: Boolean = true,
+    onGameOver: ((GameResult) -> Unit)? = null
+) {
 
     val version = match.moveVersion
 
@@ -102,8 +109,10 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false, showLegalMo
 
     // Played once the game ends, after the final move has finished animating
     LaunchedEffect(match.uiState.gameResult, match.isAnimating) {
-        if (match.uiState.gameResult != null && !match.isAnimating) {
+        val result = match.uiState.gameResult
+        if (result != null && !match.isAnimating) {
             playDoneSound()
+            onGameOver?.invoke(result)
         }
     }
 
@@ -325,6 +334,23 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false, showLegalMo
 
                 if (animatingMove != null) {
 
+                    // The captured piece stays on its square, under the moving piece, until it arrives
+                    match.animatingCapture?.let { capture ->
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    IntOffset(
+                                        (capture.square.col * SQUARE_SIZE.dp.toPx()).roundToInt(),
+                                        (capture.square.row * SQUARE_SIZE.dp.toPx()).roundToInt()
+                                    )
+                                }
+                                .size(SQUARE_SIZE.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PieceView(capture.piece)
+                        }
+                    }
+
                     MovingPiece(
                         piece = match.game.board.getPiece(animatingMove.to),
                         from = animatingMove.from,
@@ -371,7 +397,7 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false, showLegalMo
 
         PlayerPanel(match, Colour.WHITE)
 
-        if (match.uiState.gameResult != null && !match.isAnimating && showEndDialog) {
+        if (match.uiState.gameResult != null && !match.isAnimating && showResultDialog && showEndDialog) {
 
             AlertDialog(
                 onDismissRequest = { },
@@ -515,7 +541,7 @@ private fun PlayerPanel(match: ChessMatch, colour: Colour) {
                 capturedByOpponent.sumOf { it.value() }
 
     val isActive =
-        match.game.board.activeColour == colour && match.uiState.gameResult == null
+        match.activeColour == colour && match.uiState.gameResult == null
 
     Row(
         modifier = Modifier.width(BOARD_SIZE.dp),

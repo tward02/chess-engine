@@ -6,6 +6,7 @@ import com.tward.engine.game.GameResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChessGameTests {
@@ -153,6 +154,41 @@ class ChessGameTests {
             GameResult.BLACK_WIN,
             game.getGameResult()
         )
+    }
+
+    @Test
+    fun `copy is independent of the original`() {
+
+        val game = ChessGame(Board.getStartingBoard())
+        val startFen = game.board.toFEN()
+
+        val copy = game.copy()
+        copy.makeMove(copy.findMove("e2", "e4")!!)
+
+        assertEquals(startFen, game.board.toFEN(), "Original game should be unchanged")
+        assertTrue(startFen != copy.board.toFEN(), "Copy should have advanced")
+    }
+
+    @Test
+    fun `undo restores the position and threefold history`() {
+
+        val game = ChessGame(Board.getStartingBoard())
+        val startFen = game.board.toFEN()
+
+        val move = game.findMove("g1", "f3")!!
+        game.makeMove(move)
+        game.undoMove(move)
+
+        assertEquals(startFen, game.board.toFEN())
+        assertFalse(game.isThreefoldRepetition())
+    }
+
+    @Test
+    fun `findMove returns null for an illegal move`() {
+
+        val game = ChessGame(Board.getStartingBoard())
+
+        assertNull(game.findMove("e2", "e5"))
     }
 
     private fun game(fen: String): ChessGame {

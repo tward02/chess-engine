@@ -1,5 +1,6 @@
 package com.tward.engine.openingBook
 
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.jvm.java
 import kotlin.math.ceil
 import kotlin.math.max
@@ -10,29 +11,9 @@ data class BookMove(val moveStr: String, val numTimesPlayed: Int)
 
 class OpeningBook(file: String) {
 
-    val movesByPosition: MutableMap<String, List<BookMove>> = mutableMapOf()
-
-    init {
-        val contents = OpeningBook::class.java.getResource(file)?.readText()
-        if (contents != null) {
-            val entries = contents.trim(' ', '\n').split("pos").drop(1)
-
-            for (entry in entries) {
-                val entryData = entry.trim('\n').split('\n')
-                val fen = entryData[0].trim()
-                val movesData = entryData.drop(1)
-
-                val moves = mutableListOf<BookMove>()
-
-                for (moveDataStr in movesData) {
-                    val moveData = moveDataStr.split(' ')
-                    moves.add(BookMove(moveData[0], moveData[1].toInt()))
-                }
-
-                movesByPosition[fen] = moves
-            }
-        }
-    }
+    // Parsed once per file and shared; the map is read-only after parsing, so it is
+    // safe to reuse across the many bot instances a tournament creates
+    val movesByPosition: Map<String, List<BookMove>> = parsedBooks.getOrPut(file) { parse(file) }
 
     fun hasBookMove(fen: String): Boolean {
         return movesByPosition.containsKey(fen)
@@ -75,5 +56,34 @@ class OpeningBook(file: String) {
         }
 
         return null
+    }
+
+    companion object {
+
+        private val parsedBooks = ConcurrentHashMap<String, Map<String, List<BookMove>>>()
+
+        private fun parse(file: String): Map<String, List<BookMove>> {
+            val contents = OpeningBook::class.java.getResource(file)?.readText() ?: return emptyMap()
+
+            val movesByPosition = mutableMapOf<String, List<BookMove>>()
+            val entries = contents.trim(' ', '\n').split("pos").drop(1)
+
+            for (entry in entries) {
+                val entryData = entry.trim('\n').split('\n')
+                val fen = entryData[0].trim()
+                val movesData = entryData.drop(1)
+
+                val moves = mutableListOf<BookMove>()
+
+                for (moveDataStr in movesData) {
+                    val moveData = moveDataStr.split(' ')
+                    moves.add(BookMove(moveData[0], moveData[1].toInt()))
+                }
+
+                movesByPosition[fen] = moves
+            }
+
+            return movesByPosition
+        }
     }
 }

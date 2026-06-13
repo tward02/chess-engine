@@ -6,6 +6,7 @@ import com.tward.engine.board.Move
 import com.tward.engine.board.Piece
 import com.tward.engine.board.PieceType
 import com.tward.engine.board.Square
+import com.tward.logging.Log
 
 class MoveGenerator(private val board: Board) {
 
@@ -285,7 +286,7 @@ class MoveGenerator(private val board: Board) {
         for (move in moves) {
             board.makeMove(move)
             val nodes = perft(depth - 1)
-            println("${move.from}${move.to}: $nodes")
+            log.debug { "${move.from}${move.to}: $nodes" }
             board.undoMove(move)
         }
     }
@@ -423,6 +424,8 @@ class MoveGenerator(private val board: Board) {
     }
 
     companion object {
+
+        private val log = Log.of("com.tward.engine.game.MoveGenerator")
 
         val knightOffsets = listOf(
             Pair(1, 2), Pair(2, 1), Pair(-1, 2), Pair(-2, 1),

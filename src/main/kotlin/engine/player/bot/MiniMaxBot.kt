@@ -8,13 +8,19 @@ import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.ChessBot
 import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.Evaluator
+import com.tward.logging.Log
 
 private const val CHECKMATE_SCORE = 100000
 
 class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = BasicEvaluator(), private val colour: Colour, val useOpeningBookMoves: Boolean = true) : ChessBot {
 
+    private val log = Log.of<MiniMaxBot>()
+
     val openingBook = OpeningBook("/moveBook/Book.txt")
     var numberOfOpeningMoves = 0
+
+    // Positions searched for the current move; the bot is single-threaded per game so a plain field is safe
+    private var nodesSearched = 0
 
     override fun chooseMove(game: ChessGame): Move {
 
@@ -26,6 +32,7 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
 
             openingBook.getBookMove(fen)?.moveStr?.let { bookMoveStr ->
                 legalMoves.firstOrNull { it.toAlgebraic() == bookMoveStr }?.let {
+                    log.debug { "$colour played book move ${it.toAlgebraic()} (move ${numberOfOpeningMoves})" }
                     return it
                 }
             }
@@ -37,6 +44,9 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         var bestScore = if (maximising) Int.MIN_VALUE else Int.MAX_VALUE
         var alpha = Int.MIN_VALUE
         var beta = Int.MAX_VALUE
+
+        nodesSearched = 0
+        val startNanos = System.nanoTime()
 
         for (move in legalMoves) {
 
@@ -59,7 +69,18 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
             }
         }
 
-        return bestMove ?: game.getLegalMoves().first()
+        if (bestMove == null) {
+            log.warn { "$colour found no best move at depth $depth; falling back to first legal move" }
+        }
+
+        val chosen = bestMove ?: legalMoves.first()
+
+        log.debug {
+            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+            "$colour chose ${chosen.toAlgebraic()} score=$bestScore depth=$depth nodes=$nodesSearched in ${elapsedMs}ms"
+        }
+
+        return chosen
     }
 
     private fun minimax(
@@ -69,6 +90,8 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         beta: Int,
         maximising: Boolean
     ): Int {
+
+        nodesSearched++
 
         val result = game.getGameResult()
 

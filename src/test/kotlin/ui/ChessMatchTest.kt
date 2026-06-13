@@ -1,6 +1,8 @@
 package ui
 
 import com.tward.engine.board.Board
+import com.tward.engine.board.Colour
+import com.tward.engine.board.PieceType
 import com.tward.engine.board.Square
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
@@ -233,9 +235,87 @@ class ChessMatchTest {
         )
     }
 
+    @Test
+    fun `capture keeps the captured piece on its square for the animation`() {
+
+        // White pawn on e4 captures the black pawn on d5
+        val match = matchFromFen("4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1")
+
+        match.makeMove(match.game.findMove("e4", "d5")!!)
+
+        val capture = match.animatingCapture
+        assertNotNull(capture)
+        assertEquals(Square.fromString("d5"), capture.square)
+        assertEquals(PieceType.PAWN, capture.piece.type)
+        assertEquals(Colour.BLACK, capture.piece.colour)
+    }
+
+    @Test
+    fun `en passant keeps the captured pawn on its own square not the destination`() {
+
+        // White pawn e5 captures en passant onto d6; the captured pawn sits on d5
+        val match = matchFromFen("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
+
+        match.makeMove(match.game.findMove("e5", "d6")!!)
+
+        val capture = match.animatingCapture
+        assertNotNull(capture)
+        assertEquals(Square.fromString("d5"), capture.square)
+    }
+
+    @Test
+    fun `active colour flips after a move`() {
+
+        val match = createMatch()
+
+        assertEquals(Colour.WHITE, match.activeColour)
+
+        match.makeMove(match.game.findMove("e2", "e4")!!)
+
+        assertEquals(Colour.BLACK, match.activeColour)
+    }
+
+    @Test
+    fun `quiet move has no animating capture`() {
+
+        val match = createMatch()
+
+        match.makeMove(match.game.findMove("e2", "e4")!!)
+
+        assertNull(match.animatingCapture)
+    }
+
+    @Test
+    fun `non-animated capture has no animating capture`() {
+
+        val match = matchFromFen("4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1")
+
+        match.makeMove(match.game.findMove("e4", "d5")!!, animate = false)
+
+        assertNull(match.animatingCapture)
+    }
+
+    @Test
+    fun `animation finished clears the animating capture`() {
+
+        val match = matchFromFen("4k3/8/8/3p4/4P3/8/8/4K3 w - - 0 1")
+
+        match.makeMove(match.game.findMove("e4", "d5")!!)
+        assertNotNull(match.animatingCapture)
+
+        match.onAnimationFinished()
+
+        assertNull(match.animatingCapture)
+    }
+
     private fun createMatch(): ChessMatch {
+        return matchFromFen(null)
+    }
+
+    private fun matchFromFen(fen: String?): ChessMatch {
+        val board = if (fen == null) Board.getStartingBoard() else Board.fromFEN(fen)
         return ChessMatch(
-            game = ChessGame(Board.getStartingBoard()),
+            game = ChessGame(board),
             whitePlayer = HumanPlayer(),
             blackPlayer = HumanPlayer(),
             clockManager = ClockManager(
