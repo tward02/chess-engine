@@ -7,4 +7,8 @@ data class Move(
     val capturedPiece: Piece? = null,
     val promotionType: PieceType? = null,
     val isCastling: Boolean = false
-)
+) {
+    fun toAlgebraic(): String {
+        return "$from$to"
+    }
+}

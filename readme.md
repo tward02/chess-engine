@@ -1,3 +1,3 @@
-
-//TODO drag and drop logic for moving pieces\
-//TODO better legal move indications (ability to turn off)
+//TODO Make more general evaluator for board\
+//TODO Implement iterative deepening bot
+//TODO implement more complex evaluator which adapts piece score boards over the course of the game

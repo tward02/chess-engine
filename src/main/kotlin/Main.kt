@@ -13,6 +13,7 @@ import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
 import com.tward.engine.player.BotPlayer
+import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.bot.MiniMaxBot
 import com.tward.engine.player.evaluator.StandardEvaluator
 import com.tward.ui.views.BoardView
@@ -32,13 +33,11 @@ fun main() = application {
     val match =
         ChessMatch(
             ChessGame(board),
-            BotPlayer(MiniMaxBot(depth = 3, colour = Colour.WHITE, evaluator = StandardEvaluator())),
+            BotPlayer(MiniMaxBot(depth = 4, colour = Colour.WHITE, evaluator = StandardEvaluator())),
+//            HumanPlayer(),
             BotPlayer(MiniMaxBot(depth = 4, colour = Colour.BLACK, evaluator = StandardEvaluator())),
             ClockManager(TimeControl(300000, 200))
         )
-
-//    val match =
-//        ChessMatch(ChessGame(board), BotPlayer(RandomBot()), BotPlayer(RandomBot()), ClockManager(TimeControl(60000, 200)))
 
     Window(
         onCloseRequest = ::exitApplication,

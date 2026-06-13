@@ -65,7 +65,7 @@ fun EvaluationBar(evaluation: Int) {
 // bar fills gradually and never completely disappears for either side
 private fun evaluationToWhiteFraction(evaluation: Int): Float {
     val winProbability = 1.0 / (1.0 + 10.0.pow(-evaluation / 400.0))
-    return winProbability.toFloat().coerceIn(0.05f, 0.95f)
+    return winProbability.toFloat().coerceIn(0.01f, 0.99f)
 }
 
 private fun formatEvaluation(evaluation: Int): String {

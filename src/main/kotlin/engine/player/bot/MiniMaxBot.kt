@@ -4,15 +4,32 @@ import com.tward.engine.board.Colour
 import com.tward.engine.board.Move
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
+import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.ChessBot
 import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.Evaluator
 
 private const val CHECKMATE_SCORE = 100000
 
-class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = BasicEvaluator(), private val colour: Colour) : ChessBot {
+class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = BasicEvaluator(), private val colour: Colour, val useOpeningBookMoves: Boolean = true) : ChessBot {
+
+    val openingBook = OpeningBook("/moveBook/Book.txt")
+    var numberOfOpeningMoves = 0
 
     override fun chooseMove(game: ChessGame): Move {
+
+        val legalMoves = game.getLegalMoves()
+
+        if (numberOfOpeningMoves < 5 && useOpeningBookMoves) {
+            numberOfOpeningMoves++
+            val fen = game.board.toFEN(isFullFEN = false)
+
+            openingBook.getBookMove(fen)?.moveStr?.let { bookMoveStr ->
+                legalMoves.firstOrNull { it.toAlgebraic() == bookMoveStr }?.let {
+                    return it
+                }
+            }
+        }
 
         val maximising = game.board.activeColour == Colour.WHITE
 
@@ -21,7 +38,7 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         var alpha = Int.MIN_VALUE
         var beta = Int.MAX_VALUE
 
-        for (move in game.getLegalMoves()) {
+        for (move in legalMoves) {
 
             game.makeMove(move)
             val score = minimax(game, depth - 1, alpha, beta, !maximising)

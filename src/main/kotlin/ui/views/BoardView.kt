@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,14 +17,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tward.engine.board.*
 import com.tward.engine.player.BotPlayer
+import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.evaluator.StandardEvaluator
 import com.tward.ui.model.ChessMatch
+import com.tward.ui.playDoneSound
 import com.tward.ui.playMoveSound
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -36,7 +41,7 @@ const val BOARD_SIZE = SQUARE_SIZE * 8
 private const val MOVE_ANIMATION_MILLIS = 200
 
 @Composable
-fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
+fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false, showLegalMoves: Boolean = true) {
 
     val version = match.moveVersion
 
@@ -44,9 +49,16 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
         mutableStateOf<List<Move>>(emptyList())
     }
 
+    // A drag completing a promotion places the piece directly, so it should not animate
+    var promotionAnimates by remember { mutableStateOf(true) }
+
     var showEndDialog by remember { mutableStateOf(true) }
 
     var evaluation by remember { mutableIntStateOf(0) }
+
+    // The square currently being dragged from, and the live pointer position on the board
+    var dragSquare by remember { mutableStateOf<Square?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
     if (showEvaluationBar) {
 
@@ -63,6 +75,15 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
         }
     }
 
+    // Commits a move and plays its sound. Animated moves play their sound when the
+    // piece lands (see the animation effect), so only non-animated moves sound here
+    val commitMove = { move: Move, animate: Boolean ->
+        match.makeMove(move, animate)
+        if (!animate && match.uiState.gameResult == null) {
+            playMoveSound(move, match.sideToMoveInCheck())
+        }
+    }
+
     val animatingMove = match.animatingMove
 
     // Keyed on the move so each animation starts at 0 on its very first frame,
@@ -72,8 +93,17 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
     LaunchedEffect(animatingMove) {
         if (animatingMove != null) {
             animationProgress.animateTo(1f, tween(MOVE_ANIMATION_MILLIS))
-            playMoveSound(animatingMove)
+            if (match.uiState.gameResult == null) {
+                playMoveSound(animatingMove, match.sideToMoveInCheck())
+            }
             match.onAnimationFinished()
+        }
+    }
+
+    // Played once the game ends, after the final move has finished animating
+    LaunchedEffect(match.uiState.gameResult, match.isAnimating) {
+        if (match.uiState.gameResult != null && !match.isAnimating) {
+            playDoneSound()
         }
     }
 
@@ -106,13 +136,15 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
         }
     }
 
-    // Destination squares are hidden while their piece slides in via the overlay
-    val hiddenSquares =
-        if (animatingMove == null) {
-            emptySet()
-        } else {
-            setOfNotNull(animatingMove.to, rookCastlingMove(animatingMove)?.second)
+    // Destination squares are hidden while their piece slides in via the overlay,
+    // and the drag source is hidden while its piece follows the cursor
+    val hiddenSquares = buildSet {
+        if (animatingMove != null) {
+            add(animatingMove.to)
+            rookCastlingMove(animatingMove)?.let { add(it.second) }
         }
+        dragSquare?.let { add(it) }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -133,7 +165,69 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
                 Spacer(Modifier.width(12.dp))
             }
 
-            Box {
+            Box(
+                modifier = Modifier.pointerInput(match) {
+
+                    val squarePx = SQUARE_SIZE.dp.toPx()
+
+                    fun squareAt(offset: Offset): Square? {
+                        val col = (offset.x / squarePx).toInt()
+                        val row = (offset.y / squarePx).toInt()
+                        return if (col in 0..7 && row in 0..7) Square(col, row) else null
+                    }
+
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            if (match.uiState.gameResult == null && !match.isAnimating && currentPlayerIsHuman(match)) {
+
+                                val square = squareAt(offset)
+                                val piece = square?.let { match.game.board.getPiece(it) }
+
+                                if (square != null && piece != null &&
+                                    piece.colour == match.game.board.activeColour
+                                ) {
+                                    dragSquare = square
+                                    dragOffset = offset
+                                    match.select(square)
+                                }
+                            }
+                        },
+                        onDrag = { change, amount ->
+                            if (dragSquare != null) {
+                                change.consume()
+                                dragOffset += amount
+                            }
+                        },
+                        onDragEnd = {
+                            val from = dragSquare
+                            val target = squareAt(dragOffset)
+                            dragSquare = null
+
+                            val moves =
+                                if (from != null && target != null && from != target) {
+                                    match.game.getLegalMoves()
+                                        .filter { it.from == from && it.to == target }
+                                } else {
+                                    emptyList()
+                                }
+
+                            when {
+                                moves.size == 1 -> commitMove(moves[0], false)
+                                moves.isNotEmpty() -> {
+                                    promotionAnimates = false
+                                    optionalMoves = moves.filter { it.promotionType != null }
+                                }
+
+                                else -> match.clearSelection()
+                            }
+                        },
+                        onDragCancel = {
+                            dragSquare = null
+                            match.clearSelection()
+                        }
+                    )
+                }
+            ) {
 
                 Column {
                     for (row in 0..7) {
@@ -147,7 +241,7 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
                                 val isSelected =
                                     match.uiState.selectedSquare == square
 
-                                val isLegalTarget =
+                                val isLegalTarget = showLegalMoves &&
                                     square in match.uiState.legalTargets
 
                                 val type = square.getSquareType()
@@ -195,9 +289,10 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
 
 
                                                 if (moves.size == 1) {
-                                                    match.makeMove(moves[0])
+                                                    commitMove(moves[0], true)
                                                 } else {
                                                     if (moves.isNotEmpty()) {
+                                                        promotionAnimates = true
                                                         optionalMoves = moves.filter { it.promotionType != null }
                                                     } else {
                                                         match.clearSelection()
@@ -244,6 +339,24 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
                             to = rookTo,
                             progress = { animationProgress.value }
                         )
+                    }
+                }
+
+                // The dragged piece floats under the cursor, centred on the pointer
+                dragSquare?.let { square ->
+                    val draggedPiece = match.game.board.getPiece(square)
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (dragOffset.x - SQUARE_SIZE.dp.toPx() / 2).roundToInt(),
+                                    (dragOffset.y - SQUARE_SIZE.dp.toPx() / 2).roundToInt()
+                                )
+                            }
+                            .size(SQUARE_SIZE.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PieceView(draggedPiece)
                     }
                 }
             }
@@ -337,8 +450,9 @@ fun BoardView(match: ChessMatch, showEvaluationBar: Boolean = false) {
                                             RoundedCornerShape(12.dp)
                                         )
                                         .clickable {
+                                            val chosen = move
                                             optionalMoves = emptyList()
-                                            match.makeMove(move)
+                                            commitMove(chosen, promotionAnimates)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -415,6 +529,12 @@ private fun PlayerPanel(match: ChessMatch, colour: Colour) {
 
 private fun lerp(from: Int, to: Int, fraction: Float): Float {
     return from + (to - from) * fraction
+}
+
+private fun currentPlayerIsHuman(match: ChessMatch): Boolean {
+    val player =
+        if (match.game.board.activeColour == Colour.WHITE) match.whitePlayer else match.blackPlayer
+    return player is HumanPlayer
 }
 
 // The from and to squares of the rook's part of a castling move

@@ -6,19 +6,17 @@ import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import kotlin.concurrent.thread
 
-fun playMoveSound(move: Move) {
-    if (move.capturedPiece != null) {
-        playSound("/sounds/take.wav")
-    } else {
-        playSound("/sounds/move.wav")
+fun playMoveSound(move: Move, isCheck: Boolean) {
+    when {
+        isCheck -> playSound("/sounds/check.wav")
+        move.capturedPiece != null -> playSound("/sounds/take.wav")
+        else -> playSound("/sounds/move.wav")
     }
 }
 
 fun playDoneSound() {
-    playSound("/sounds/done.mp3")
+    playSound("/sounds/done.wav")
 }
-
-//TODO check sound
 
 fun playSound(resourcePath: String) {
     thread(isDaemon = true) {

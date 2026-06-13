@@ -47,6 +47,11 @@ class ChessMatch(
         animatingMove = null
     }
 
+    // Whether the side now to move is in check, i.e. the last move gave check
+    fun sideToMoveInCheck(): Boolean {
+        return game.isInCheck(game.board.activeColour)
+    }
+
     fun select(square: Square) {
 
         if (game.isGameOver()) return
@@ -85,7 +90,7 @@ class ChessMatch(
 
 
 
-    fun makeMove(move: Move) {
+    fun makeMove(move: Move, animate: Boolean = true) {
 
         if (game.isGameOver()) return
 
@@ -107,7 +112,8 @@ class ChessMatch(
 
         clearSelection()
 
-        animatingMove = move
+        // Drag-and-drop moves are placed directly by the player, so they don't animate
+        animatingMove = if (animate) move else null
 
         checkGameOver()
     }
