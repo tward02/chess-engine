@@ -79,7 +79,7 @@ private val KING_TABLE = arrayOf(
     intArrayOf(20, 30, 10, 0, 0, 10, 30, 20)
 )
 
-class StandardEvaluator : Evaluator {
+class StandardEvaluator(val useNew: Boolean = true) : Evaluator {
 
     // Score is always from White's perspective: positive favours White, negative favours Black
     override fun evaluate(game: ChessGame, depth: Int): Int {
@@ -129,9 +129,15 @@ class StandardEvaluator : Evaluator {
         val boardCopy = game.board.copy()
         boardCopy.activeColour = colour
 
-        return MoveGenerator(boardCopy)
-            .generateLegalMoves()
-            .size * MOBILITY_MULTIPLIER
+        var attacks = 0
+        val moves = MoveGenerator(boardCopy).generateLegalMoves()
+        if (useNew) {
+            attacks = moves.foldRight(0) { move, value ->
+                return value + (move.capturedPiece?.value() ?: 0)
+            }
+        }
+
+        return (moves.size * MOBILITY_MULTIPLIER) + (attacks * MOBILITY_MULTIPLIER)
     }
 
     private fun check(game: ChessGame, colour: Colour): Int {

@@ -214,6 +214,52 @@ class ChessMatchTest {
     }
 
     @Test
+    fun `live timeout ends the game when white flags while thinking`() {
+
+        var now = 0L
+        val clock = ClockManager(TimeControl(initialMillis = 1_000, incrementMillis = 0), now = { now })
+        val match = matchWithClock(clock)
+
+        // White is to move; let real time pass its 1s budget without a move being played
+        now = 1_500
+        match.checkTimeout()
+
+        assertEquals(GameResult.BLACK_TIME_WIN, match.game.result)
+        assertEquals(GameResult.BLACK_TIME_WIN, match.uiState.gameResult)
+    }
+
+    @Test
+    fun `live timeout ends the game when black flags while thinking`() {
+
+        var now = 0L
+        val clock = ClockManager(
+            TimeControl(initialMillis = 1_000, incrementMillis = 0),
+            activeColor = Colour.BLACK,
+            now = { now }
+        )
+        val match = matchWithClock(clock)
+
+        now = 1_500
+        match.checkTimeout()
+
+        assertEquals(GameResult.WHITE_TIME_WIN, match.game.result)
+    }
+
+    @Test
+    fun `no timeout while the active player still has time`() {
+
+        var now = 0L
+        val clock = ClockManager(TimeControl(initialMillis = 1_000, incrementMillis = 0), now = { now })
+        val match = matchWithClock(clock)
+
+        now = 500
+        match.checkTimeout()
+
+        assertNull(match.game.result)
+        assertNull(match.uiState.gameResult)
+    }
+
+    @Test
     fun `fools mate propagates result into ui`() {
 
         val match = createMatch()
@@ -312,12 +358,21 @@ class ChessMatchTest {
         return matchFromFen(null)
     }
 
+    private fun matchWithClock(clock: ClockManager): ChessMatch {
+        return ChessMatch(
+            game = ChessGame(Board.getStartingBoard()),
+            whitePlayer = HumanPlayer("test"),
+            blackPlayer = HumanPlayer("test"),
+            clockManager = clock
+        )
+    }
+
     private fun matchFromFen(fen: String?): ChessMatch {
         val board = if (fen == null) Board.getStartingBoard() else Board.fromFEN(fen)
         return ChessMatch(
             game = ChessGame(board),
-            whitePlayer = HumanPlayer(),
-            blackPlayer = HumanPlayer(),
+            whitePlayer = HumanPlayer("test"),
+            blackPlayer = HumanPlayer("test"),
             clockManager = ClockManager(
                 TimeControl(
                     initialMillis = 300_000,

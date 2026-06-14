@@ -116,6 +116,14 @@ fun BoardView(
         }
     }
 
+    // End the game as soon as the side to move flags, rather than waiting for their next move
+    LaunchedEffect(Unit) {
+        while (match.uiState.gameResult == null) {
+            match.checkTimeout()
+            delay(100.milliseconds)
+        }
+    }
+
     LaunchedEffect(version, animatingMove) {
 
         // The next player (bot or human) may not move until the animation has finished
@@ -536,6 +544,9 @@ private fun PlayerPanel(match: ChessMatch, colour: Colour) {
     val capturedByOpponent =
         if (colour == Colour.WHITE) match.capturedByBlack else match.capturedByWhite
 
+    val name =
+        if (colour == Colour.WHITE) match.whitePlayer.name else match.blackPlayer.name
+
     val advantage =
         captured.sumOf { it.value() } -
                 capturedByOpponent.sumOf { it.value() }
@@ -549,7 +560,7 @@ private fun PlayerPanel(match: ChessMatch, colour: Colour) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         CapturedPieces(captured, advantage)
-        ChessClock(match.clockManager, colour, isActive)
+        ChessClock(match.clockManager, colour, isActive, name)
     }
 }
 

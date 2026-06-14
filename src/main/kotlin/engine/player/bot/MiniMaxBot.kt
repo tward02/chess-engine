@@ -8,19 +8,31 @@ import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.ChessBot
 import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.Evaluator
+import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
+import com.tward.engine.player.ordering.MoveOrderer
 import com.tward.logging.Log
 
 private const val CHECKMATE_SCORE = 100000
 
-class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = BasicEvaluator(), private val colour: Colour, val useOpeningBookMoves: Boolean = true) : ChessBot {
+class MiniMaxBot(
+    private val depth: Int,
+    private val evaluator: Evaluator = BasicEvaluator(),
+    private val colour: Colour,
+    val useOpeningBookMoves: Boolean = true,
+    // A fresh stateful orderer per bot (default args are evaluated per construction, and the bot
+    // factories build a new bot per game, so the killer/history tables are never shared).
+    private val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
+) : ChessBot {
 
     private val log = Log.of<MiniMaxBot>()
 
     val openingBook = OpeningBook("/moveBook/Book.txt")
     var numberOfOpeningMoves = 0
 
-    // Positions searched for the current move; the bot is single-threaded per game so a plain field is safe
-    private var nodesSearched = 0
+    // Positions searched for the current move; the bot is single-threaded per game so a plain field
+    // is safe. Exposed (read-only) so the effect of move ordering can be measured.
+    var nodesSearched = 0
+        private set
 
     override fun chooseMove(game: ChessGame): Move {
 
@@ -46,12 +58,15 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         var beta = Int.MAX_VALUE
 
         nodesSearched = 0
+        moveOrderer.reset()
         val startNanos = System.nanoTime()
 
-        for (move in legalMoves) {
+        // Search the most promising moves first so alpha/beta tighten early and prune the rest.
+        // The root is ply 0; its children are searched at ply 1.
+        for (move in moveOrderer.order(legalMoves, ply = 0)) {
 
             game.makeMove(move)
-            val score = minimax(game, depth - 1, alpha, beta, !maximising)
+            val score = minimax(game, depth - 1, alpha, beta, !maximising, ply = 1)
             game.undoMove(move)
 
             if (maximising) {
@@ -88,7 +103,8 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         depth: Int,
         alpha: Int,
         beta: Int,
-        maximising: Boolean
+        maximising: Boolean,
+        ply: Int
     ): Int {
 
         nodesSearched++
@@ -111,18 +127,22 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         var currentAlpha = alpha
         var currentBeta = beta
 
+        val orderedMoves = moveOrderer.order(game.getLegalMoves(), ply)
+
         if (maximising) {
             var best = Int.MIN_VALUE
 
-            for (move in game.getLegalMoves()) {
+            for (move in orderedMoves) {
                 game.makeMove(move)
-                val score = minimax(game, depth - 1, currentAlpha, currentBeta, false)
+                val score = minimax(game, depth - 1, currentAlpha, currentBeta, false, ply + 1)
                 game.undoMove(move)
 
                 best = maxOf(best, score)
                 currentAlpha = maxOf(currentAlpha, best)
 
                 if (currentBeta <= currentAlpha) {
+                    // This move refuted the position; let the orderer learn from the cutoff
+                    moveOrderer.onBetaCutoff(move, ply, depth)
                     break
                 }
             }
@@ -131,15 +151,16 @@ class MiniMaxBot(private val depth: Int, private val evaluator: Evaluator = Basi
         } else {
             var best = Int.MAX_VALUE
 
-            for (move in game.getLegalMoves()) {
+            for (move in orderedMoves) {
                 game.makeMove(move)
-                val score = minimax(game, depth - 1, currentAlpha, currentBeta, true)
+                val score = minimax(game, depth - 1, currentAlpha, currentBeta, true, ply + 1)
                 game.undoMove(move)
 
                 best = minOf(best, score)
                 currentBeta = minOf(currentBeta, best)
 
                 if (currentBeta <= currentAlpha) {
+                    moveOrderer.onBetaCutoff(move, ply, depth)
                     break
                 }
             }

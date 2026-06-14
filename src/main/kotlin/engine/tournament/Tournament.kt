@@ -44,12 +44,16 @@ class Tournament(
     private val bWins = AtomicInteger(0)
     private val draws = AtomicInteger(0)
     private val completed = AtomicInteger(0)
+    private val whiteWins = AtomicInteger(0)
+    private val blackWins = AtomicInteger(0)
 
     val botAWins: Int get() = aWins.get()
     val botBWins: Int get() = bWins.get()
     val drawCount: Int get() = draws.get()
     val completedGames: Int get() = completed.get()
     val isComplete: Boolean get() = completed.get() >= totalGames
+    val whiteWinsCount: Int get() = whiteWins.get()
+    val blackWinsCount: Int get() = blackWins.get()
 
     // Claims the next game to play, or -1 once every game has been handed out
     fun claimGameIndex(): Int {
@@ -65,10 +69,17 @@ class Tournament(
     fun record(index: Int, result: GameResult) {
         val aIsWhite = index % 2 == 0
 
+        val whiteWin = isWhiteWin(result)
         when {
             result.isDraw() -> draws.incrementAndGet()
-            isWhiteWin(result) == aIsWhite -> aWins.incrementAndGet()
+            whiteWin == aIsWhite -> aWins.incrementAndGet()
             else -> bWins.incrementAndGet()
+        }
+
+        if (whiteWin) {
+            whiteWins.incrementAndGet()
+        } else if (!result.isDraw()) {
+            blackWins.incrementAndGet()
         }
 
         val done = completed.incrementAndGet()

@@ -106,6 +106,26 @@ class ChessMatch(
         }
     }
 
+    /**
+     * Ends the game the moment the side to move runs out of time, without waiting for them to play.
+     * [checkGameOver] only sees the stored clock, which updates on a move; this reads the live clock
+     * (elapsed since the move started), so it must be polled while a player is thinking.
+     */
+    fun checkTimeout() {
+
+        if (uiState.gameResult != null) return
+
+        when {
+            clockManager.currentWhite() <= 0 -> game.result = GameResult.BLACK_TIME_WIN
+            clockManager.currentBlack() <= 0 -> game.result = GameResult.WHITE_TIME_WIN
+            else -> return
+        }
+
+        clockManager.stopClock()
+        uiState = BoardUiState(gameResult = game.result)
+        log.info { "Game over: ${game.result}" }
+    }
+
 
 
     fun makeMove(move: Move, animate: Boolean = true) {

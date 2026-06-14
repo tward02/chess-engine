@@ -140,7 +140,7 @@ enum class GameResult {
     },
     WHITE_TIME_WIN {
         override fun toString(): String {
-            return "White Wins in Time!"
+            return "White Wins on Time!"
         }
     },
     BLACK_TIME_WIN {

@@ -61,14 +61,7 @@ data class Piece(var type: PieceType, var colour: Colour) {
     }
 
     fun value(): Int {
-        return when (type) {
-            PieceType.PAWN -> 1
-            PieceType.KNIGHT -> 3
-            PieceType.BISHOP -> 3
-            PieceType.ROOK -> 5
-            PieceType.QUEEN -> 9
-            PieceType.KING -> 0
-        }
+        return type.value()
     }
 }
 
@@ -79,6 +72,19 @@ enum class PieceType {
     BISHOP,
     QUEEN,
     KING
+}
+
+// Simple material value of a piece type, used for quick comparisons such as move ordering.
+// (Evaluators use their own, more finely tuned centipawn values.)
+fun PieceType.value(): Int {
+    return when (this) {
+        PieceType.PAWN -> 1
+        PieceType.KNIGHT -> 3
+        PieceType.BISHOP -> 3
+        PieceType.ROOK -> 5
+        PieceType.QUEEN -> 9
+        PieceType.KING -> 0
+    }
 }
 
 enum class Colour {

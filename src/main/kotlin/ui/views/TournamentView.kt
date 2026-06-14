@@ -40,6 +40,8 @@ fun TournamentView(tournament: Tournament) {
     var bWins by remember { mutableStateOf(0) }
     var draws by remember { mutableStateOf(0) }
     var completed by remember { mutableStateOf(0) }
+    var whiteWins by remember { mutableStateOf(0) }
+    var blackWins by remember { mutableStateOf(0) }
 
     // The game currently shown on screen, or null once none remain to display
     var displayed by remember { mutableStateOf<DisplayedGame?>(null) }
@@ -61,6 +63,8 @@ fun TournamentView(tournament: Tournament) {
             bWins = tournament.botBWins
             draws = tournament.drawCount
             completed = tournament.completedGames
+            whiteWins = tournament.whiteWinsCount
+            blackWins = tournament.blackWinsCount
             if (completed >= tournament.totalGames) break
             delay(150.milliseconds)
         }
@@ -68,6 +72,8 @@ fun TournamentView(tournament: Tournament) {
         bWins = tournament.botBWins
         draws = tournament.drawCount
         completed = tournament.completedGames
+        whiteWins = tournament.whiteWinsCount
+        blackWins = tournament.blackWinsCount
     }
 
     Row(modifier = Modifier.fillMaxSize().background(Color(0xff1f3b16))) {
@@ -108,13 +114,15 @@ fun TournamentView(tournament: Tournament) {
             aWins = aWins,
             bWins = bWins,
             draws = draws,
-            completed = completed
+            completed = completed,
+            whiteWins = whiteWins,
+            blackWins = blackWins
         )
     }
 }
 
 @Composable
-private fun ResultsPanel(tournament: Tournament, aWins: Int, bWins: Int, draws: Int, completed: Int) {
+private fun ResultsPanel(tournament: Tournament, aWins: Int, bWins: Int, draws: Int, completed: Int, whiteWins: Int, blackWins: Int) {
 
     val total = tournament.totalGames
     val isComplete = completed >= total
@@ -174,6 +182,18 @@ private fun ResultsPanel(tournament: Tournament, aWins: Int, bWins: Int, draws: 
             color = Color(0xFFBBBBBB),
             fontSize = 14.sp
         )
+
+        Text(
+            text = "White wins: $whiteWins",
+            color = Color(0xFFBBBBBB),
+            fontSize = 14.sp
+        )
+
+        Text(
+            text = "Black wins: $blackWins",
+            color = Color(0xFFBBBBBB),
+            fontSize = 14.sp
+        )
     }
 }
 
@@ -225,8 +245,8 @@ private fun buildDisplayMatch(tournament: Tournament, index: Int): ChessMatch {
 
     return ChessMatch(
         ChessGame(Board.getStartingBoard()),
-        BotPlayer(whiteSpec.createBot(Colour.WHITE)),
-        BotPlayer(blackSpec.createBot(Colour.BLACK)),
+        BotPlayer(whiteSpec.createBot(Colour.WHITE), whiteSpec.name),
+        BotPlayer(blackSpec.createBot(Colour.BLACK), blackSpec.name),
         ClockManager(TimeControl(DISPLAY_TIME_MILLIS, 0))
     )
 }

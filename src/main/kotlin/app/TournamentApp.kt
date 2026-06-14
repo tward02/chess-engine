@@ -7,8 +7,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.player.bot.MiniMaxBot
-import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.StandardEvaluator
+import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
@@ -36,15 +36,15 @@ fun main() = application {
 
     // Each spec builds a fresh bot per game (bots hold per-game state, so they can't be shared).
     // The opening book gives the deterministic minimax search varied openings across games.
-    val specA = BotSpec("MiniMax d4") { colour ->
-        MiniMaxBot(depth = 4, colour = colour, evaluator = StandardEvaluator())
+    val specA = BotSpec("MiniMax New Eval") { colour ->
+        MiniMaxBot(depth = 4, colour = colour, evaluator = StandardEvaluator(), moveOrderer = KillerHistoryMoveOrderer())
     }
 
-    val specB = BotSpec("MiniMax d4 - Basic") { colour ->
-        MiniMaxBot(depth = 4, colour = colour, evaluator = BasicEvaluator())
+    val specB = BotSpec("MiniMax Old Eval") { colour ->
+        MiniMaxBot(depth = 4, colour = colour, evaluator = StandardEvaluator(useNew = false), moveOrderer = KillerHistoryMoveOrderer())
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 100)
+    val tournament = Tournament(specA, specB, totalGames = 1000)
 
     Window(
         onCloseRequest = ::exitApplication,
