@@ -27,7 +27,7 @@ import com.tward.engine.board.*
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
-import com.tward.engine.player.evaluator.StandardEvaluator
+import com.tward.engine.player.evaluator.AdaptiveEvaluator
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.playDoneSound
 import com.tward.ui.playMoveSound
@@ -69,7 +69,7 @@ fun BoardView(
 
     if (showEvaluationBar) {
 
-        val evaluator = remember { StandardEvaluator() }
+        val evaluator = remember { AdaptiveEvaluator() }
 
         LaunchedEffect(version) {
 

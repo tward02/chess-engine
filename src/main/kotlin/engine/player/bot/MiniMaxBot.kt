@@ -6,8 +6,8 @@ import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
 import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.ChessBot
-import com.tward.engine.player.evaluator.BasicEvaluator
 import com.tward.engine.player.evaluator.Evaluator
+import com.tward.engine.player.evaluator.StandardEvaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.player.ordering.MoveOrderer
 import com.tward.logging.Log
@@ -16,9 +16,10 @@ private const val CHECKMATE_SCORE = 100000
 
 class MiniMaxBot(
     private val depth: Int,
-    private val evaluator: Evaluator = BasicEvaluator(),
     private val colour: Colour,
-    val useOpeningBookMoves: Boolean = true,
+    private val aggression: Int = 10,
+    private val useOpeningBookMoves: Boolean = true,
+    private val evaluator: Evaluator = StandardEvaluator(aggression = aggression),
     // A fresh stateful orderer per bot (default args are evaluated per construction, and the bot
     // factories build a new bot per game, so the killer/history tables are never shared).
     private val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
