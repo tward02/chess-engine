@@ -75,6 +75,10 @@ Small facade over `java.util.logging`. `Log.of<T>()` → `AppLogger` with lazy `
 - `debug` (JUL `FINE`) — per-move detail (each move, book-move selection, bot search nodes/score/time). Default level is INFO; set `Level.FINE` to see per-move detail.
 - Move logging lives in `ChessMatch.makeMove` and `MiniMaxBot.chooseMove` only — **never** in `Board.makeMove`, `MoveGenerator`, or the minimax recursion (hot search path).
 
+## Code style
+
+Every source file must end with a trailing newline.
+
 ### Compose UI testing
 
 Tests use `runComposeUiTest { setContent {...}; onNodeWithText(...).assertIsDisplayed() }` — no JUnit4 rule needed, coexists with JUnit5. For composables with a perpetual `LaunchedEffect` (e.g. `ChessClock`), set `mainClock.autoAdvance = false` before `setContent` to prevent the test hanging. To avoid loading image resources, test `CapturedPieces` with an empty piece list.
