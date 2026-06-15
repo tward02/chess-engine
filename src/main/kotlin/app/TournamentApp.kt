@@ -21,12 +21,11 @@ import com.tward.ui.views.TournamentView
  * relative strength. One game is shown live while the rest run headless across a thread
  * pool; results are tallied and displayed alongside the board.
  *
- * Configure the two contenders ([specA], [specB]) and [Tournament.totalGames] below.
+ * Configure contenders and game count below.
  */
 fun main() = application {
 
-    // Raise to Level.FINE to also see per-move, book-move and bot-search detail
-    LogConfig.configure()
+    LogConfig.configure()  // raise to Level.FINE for per-move and bot-search detail
 
     val log = Log.of("com.tward.app.TournamentApp")
     log.info { "Starting bot tournament" }
@@ -35,8 +34,7 @@ fun main() = application {
         size = DpSize(1040.dp, 840.dp)
     )
 
-    // Each spec builds a fresh bot per game (bots hold per-game state, so they can't be shared).
-    // The opening book gives the deterministic minimax search varied openings across games.
+    // Each spec builds a fresh bot per game; the opening book gives varied openings across games
     val specA = BotSpec("MiniMax") { colour ->
         MiniMaxBot(
             depth = 4,

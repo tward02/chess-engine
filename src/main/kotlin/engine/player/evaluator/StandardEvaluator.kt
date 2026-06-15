@@ -9,12 +9,11 @@ import com.tward.engine.game.MoveGenerator
 
 open class StandardEvaluator(val aggression: Int = 10) : Evaluator {
 
-    // Bonuses are protected so subclasses (e.g. AdaptiveEvaluator) can reuse them
     protected val checkBonus: Int = 50
     protected val castleBonus: Int = 60
     protected val mobilityMultiplier: Int = 5
 
-    // Score is always from White's perspective: positive favours White, negative favours Black
+    // Score is always from White's perspective: positive = White ahead, negative = Black ahead
     override fun evaluate(game: ChessGame, depth: Int): Int {
         return scorePlayer(game, Colour.WHITE) - scorePlayer(game, Colour.BLACK)
     }
@@ -44,10 +43,8 @@ open class StandardEvaluator(val aggression: Int = 10) : Evaluator {
         }
     }
 
-    // Overridable so a subclass can change how a piece's square is scored (e.g. tapered tables)
     protected open fun locationValue(piece: Piece, square: Square): Int {
         val table = PieceSquareTables.middlegameTable(piece.type)
-
         val row = if (piece.colour == Colour.WHITE) square.row else 7 - square.row
         return table[row][square.col]
     }
@@ -59,6 +56,7 @@ open class StandardEvaluator(val aggression: Int = 10) : Evaluator {
         var attacks: Int
         val moves = MoveGenerator(boardCopy).generateLegalMoves()
         attacks = moves.foldRight(0) { move, value ->
+            // Non-local return from foldRight — intentional, leave as-is
             return value + (move.capturedPiece?.value() ?: 0)
         }
 

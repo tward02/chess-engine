@@ -74,8 +74,7 @@ enum class PieceType {
     KING
 }
 
-// Simple material value of a piece type, used for quick comparisons such as move ordering.
-// (Evaluators use their own, more finely tuned centipawn values.)
+// Coarse material scale used for ordering; evaluators use their own finely-tuned centipawn values.
 fun PieceType.value(): Int {
     return when (this) {
         PieceType.PAWN -> 1

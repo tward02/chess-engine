@@ -10,8 +10,8 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 
 /**
- * Installs a single concise console handler on the root logger. Call [configure] once at
- * application start. Raise the level to [Level.FINE] to see per-move and bot-search detail.
+ * Installs a concise console handler on the root logger.
+ * Call [configure] once at app start; raise to [Level.FINE] for per-move detail.
  */
 object LogConfig {
 

@@ -144,6 +144,19 @@ class TournamentTest {
     }
 
     @Test
+    fun `the configured time budget is publicly readable`() {
+
+        // TournamentView reads this to set the displayed game's clock, so it must stay public
+        val timed = Tournament(
+            randomSpec("A"), randomSpec("B"), totalGames = 1, initialTimeMillis = 180_000
+        )
+        assertEquals(180_000, timed.initialTimeMillis)
+
+        val untimed = Tournament(randomSpec("A"), randomSpec("B"), totalGames = 1)
+        assertEquals(0, untimed.initialTimeMillis)
+    }
+
+    @Test
     fun `with no time budget the bot is given zero`() {
 
         val seen = CopyOnWriteArrayList<Int>()

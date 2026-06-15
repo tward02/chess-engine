@@ -24,16 +24,12 @@ import com.tward.ui.model.TimeControl
 import com.tward.ui.views.BoardView
 
 /**
- * Head-to-head application: a single game shown on the board.
- *
- * Configure [whitePlayer] and [blackPlayer] below as any mix of [HumanPlayer] and
- * [BotPlayer] — human vs bot, bot vs bot, or human vs human. A human moves by clicking
- * or dragging pieces; bots move on their own.
+ * Single-game application. Configure [whitePlayer] and [blackPlayer] below as any mix of
+ * [HumanPlayer] and [BotPlayer]. Humans move by clicking or dragging; bots move automatically.
  */
 fun main() = application {
 
-    // Raise to Level.FINE to also see per-move, book-move and bot-search detail
-    LogConfig.configure()
+    LogConfig.configure()  // raise to Level.FINE for per-move and bot-search detail
 
     val log = Log.of("com.tward.app.GameApp")
     log.info { "Starting head-to-head game" }
@@ -54,9 +50,7 @@ fun main() = application {
             moveOrderer = KillerHistoryMoveOrderer()
         ), name = "MiniMax Iterative Deepening"
     )
-    // Other setups:
-    //   Bot vs bot     -> BotPlayer(MiniMaxBot(... WHITE ...)) and BotPlayer(MiniMaxBot(... BLACK ...))
-    //   Human vs human -> HumanPlayer() and HumanPlayer()
+    // Alternatives: BotPlayer(...) + BotPlayer(...) for bot-vs-bot, HumanPlayer() + HumanPlayer() for 2-player
     val timeControl = TimeControl(initialMillis = 120_000, incrementMillis = 200)
     // --------------------------------
 

@@ -26,8 +26,7 @@ import com.tward.ui.model.TimeControl
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
-// The displayed game gets a long clock purely so it isn't ended on time; tournament
-// results come from the chess outcome, not the clock
+// Fallback clock for the displayed game when no tournament time is set; long enough to never flag
 private const val DISPLAY_TIME_MILLIS = 60L * 60 * 1000
 
 private class DisplayedGame(val index: Int, val match: ChessMatch)
@@ -35,7 +34,6 @@ private class DisplayedGame(val index: Int, val match: ChessMatch)
 @Composable
 fun TournamentView(tournament: Tournament) {
 
-    // Live snapshot of the thread-safe tally, polled for display
     var aWins by remember { mutableStateOf(0) }
     var bWins by remember { mutableStateOf(0) }
     var draws by remember { mutableStateOf(0) }
@@ -43,7 +41,6 @@ fun TournamentView(tournament: Tournament) {
     var whiteWins by remember { mutableStateOf(0) }
     var blackWins by remember { mutableStateOf(0) }
 
-    // The game currently shown on screen, or null once none remain to display
     var displayed by remember { mutableStateOf<DisplayedGame?>(null) }
 
     fun startNextDisplayedGame() {
@@ -52,7 +49,7 @@ fun TournamentView(tournament: Tournament) {
     }
 
     LaunchedEffect(Unit) {
-        // Reserve a game to watch before the headless workers drain the pool
+        // Claim a display game before the headless workers drain the pool
         startNextDisplayedGame()
         tournament.runHeadlessWorkers()
     }
@@ -82,7 +79,7 @@ fun TournamentView(tournament: Tournament) {
 
             val game = displayed
             if (game != null) {
-                // Keyed on the index so each game gets a fresh board with reset state
+                // Key on index so Compose recreates state for each new game
                 key(game.index) {
                     BoardView(
                         match = game.match,
@@ -251,7 +248,6 @@ private fun buildDisplayMatch(tournament: Tournament, index: Int): ChessMatch {
 
     val (whiteSpec, blackSpec) = tournament.colourAssignment(index)
 
-    // Use tournament time if set, otherwise fall back to the long display-only clock
     val displayTime = if (tournament.initialTimeMillis > 0) tournament.initialTimeMillis.toLong()
                       else DISPLAY_TIME_MILLIS
 

@@ -29,7 +29,6 @@ class BasicEvaluator : Evaluator {
             }
         }
 
-        // Score is always from White's perspective: positive favours White, negative favours Black
         return score
     }
 }

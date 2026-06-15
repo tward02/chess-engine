@@ -4,14 +4,10 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 /**
- * Small Kotlin facade over java.util.logging. Messages are passed as lambdas so that
- * the cost of building a string is only paid when the level is actually enabled — this
- * keeps debug logging cheap on hot paths (e.g. per-move during a headless tournament).
+ * Kotlin facade over java.util.logging with lazy message evaluation (strings aren't built unless
+ * the level is enabled, keeping debug calls cheap on hot paths).
  *
- * Convention used across the app:
- *  - info  : lifecycle and headline events (app start, game over, tournament progress)
- *  - debug : per-move detail (each move, book-move selection, bot search summaries)
- *  - warn / error : unexpected situations
+ * Levels: info = lifecycle/headline; debug = per-move detail; warn/error = unexpected.
  */
 class AppLogger(private val delegate: Logger) {
 

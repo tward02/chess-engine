@@ -56,14 +56,13 @@ fun BoardView(
         mutableStateOf<List<Move>>(emptyList())
     }
 
-    // A drag completing a promotion places the piece directly, so it should not animate
+    // Drag-completed promotions place the piece directly, so they must not animate
     var promotionAnimates by remember { mutableStateOf(true) }
 
     var showEndDialog by remember { mutableStateOf(true) }
 
     var evaluation by remember { mutableIntStateOf(0) }
 
-    // The square currently being dragged from, and the live pointer position on the board
     var dragSquare by remember { mutableStateOf<Square?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
@@ -73,7 +72,7 @@ fun BoardView(
 
         LaunchedEffect(version) {
 
-            // Copy on the UI thread so the evaluation can run safely in the background
+                // Copy on the UI thread before handing off to the background evaluator
             val searchGame = match.game.copy()
 
             evaluation = withContext(Dispatchers.Default) {
@@ -82,8 +81,6 @@ fun BoardView(
         }
     }
 
-    // Commits a move and plays its sound. Animated moves play their sound when the
-    // piece lands (see the animation effect), so only non-animated moves sound here
     val commitMove = { move: Move, animate: Boolean ->
         match.makeMove(move, animate)
         if (!animate && match.uiState.gameResult == null) {
@@ -93,8 +90,8 @@ fun BoardView(
 
     val animatingMove = match.animatingMove
 
-    // Keyed on the move so each animation starts at 0 on its very first frame,
-    // otherwise the piece briefly flashes at the target square
+    // Keyed on move so animationProgress resets to 0 for each new move; without this the piece
+    // briefly flashes at the destination before the animation begins
     val animationProgress = remember(animatingMove) { Animatable(0f) }
 
     LaunchedEffect(animatingMove) {
@@ -107,7 +104,7 @@ fun BoardView(
         }
     }
 
-    // Played once the game ends, after the final move has finished animating
+    // Wait for the final move animation to finish before playing the end sound
     LaunchedEffect(match.uiState.gameResult, match.isAnimating) {
         val result = match.uiState.gameResult
         if (result != null && !match.isAnimating) {
@@ -116,7 +113,7 @@ fun BoardView(
         }
     }
 
-    // End the game as soon as the side to move flags, rather than waiting for their next move
+    // Poll for timeout so flagging is detected immediately, not on the next move
     LaunchedEffect(Unit) {
         while (match.uiState.gameResult == null) {
             match.checkTimeout()
@@ -126,8 +123,7 @@ fun BoardView(
 
     LaunchedEffect(version, animatingMove) {
 
-        // The next player (bot or human) may not move until the animation has finished
-        if (animatingMove != null) return@LaunchedEffect
+        if (animatingMove != null) return@LaunchedEffect  // wait for animation to finish
 
         val activeColour = match.game.board.activeColour
         val currentPlayer =
@@ -141,8 +137,7 @@ fun BoardView(
 
             delay(200.milliseconds)
 
-            // The remaining time on the mover's clock, read just before it starts thinking, so a
-            // time-aware bot can budget its search
+            // Read the clock just before the bot starts so it can budget its search accurately
             val timeLeft = (
                 if (activeColour == Colour.WHITE) {
                     match.clockManager.currentWhite()
@@ -164,8 +159,7 @@ fun BoardView(
         }
     }
 
-    // Destination squares are hidden while their piece slides in via the overlay,
-    // and the drag source is hidden while its piece follows the cursor
+    // Destination hidden while the animated piece slides in; drag source hidden while dragging
     val hiddenSquares = buildSet {
         if (animatingMove != null) {
             add(animatingMove.to)
@@ -353,7 +347,7 @@ fun BoardView(
 
                 if (animatingMove != null) {
 
-                    // The captured piece stays on its square, under the moving piece, until it arrives
+                    // Captured piece stays visible under the moving piece until it arrives
                     match.animatingCapture?.let { capture ->
                         Box(
                             modifier = Modifier
@@ -387,7 +381,6 @@ fun BoardView(
                     }
                 }
 
-                // The dragged piece floats under the cursor, centred on the pointer
                 dragSquare?.let { square ->
                     val draggedPiece = match.game.board.getPiece(square)
                     Box(
@@ -407,7 +400,7 @@ fun BoardView(
             }
 
             if (showEvaluationBar) {
-                // Balance the bar so the board stays centred beneath the player panels
+                // Balances the evaluation bar width so the board stays centred
                 Spacer(Modifier.width((EVALUATION_BAR_WIDTH + 12).dp))
             }
         }
@@ -521,8 +514,7 @@ fun BoardView(
     }
 }
 
-// Overlay piece sliding from one square to another, offset is applied at layout
-// time so the animation never recomposes the board
+// Overlay piece that slides between squares; offset applied at layout time to avoid recomposing the board
 @Composable
 private fun MovingPiece(
     piece: Piece?,
@@ -585,7 +577,6 @@ private fun currentPlayerIsHuman(match: ChessMatch): Boolean {
     return player is HumanPlayer
 }
 
-// The from and to squares of the rook's part of a castling move
 private fun rookCastlingMove(move: Move): Pair<Square, Square>? {
 
     if (!move.isCastling) return null

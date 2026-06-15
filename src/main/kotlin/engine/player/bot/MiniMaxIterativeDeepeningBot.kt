@@ -26,9 +26,8 @@ class MiniMaxIterativeDeepeningBot(
     private val maxThinkTime = 20000
     private val increment = 200
 
-    private var deadline = 0L
-    private var searchAborted = false
-
+    private var deadline = 0L          // nanosecond deadline set before the ID loop
+    private var searchAborted = false  // set by minimax on timeout; causes root to discard partial result
 
     override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
 
@@ -85,11 +84,8 @@ class MiniMaxIterativeDeepeningBot(
         return bestMove
     }
 
-    // Runs the alpha-beta search at the root for one depth iteration.
-    // Separated from the recursive minimax so we can track bestMove without threading it through
-    // recursion, and so we can promote previousBestMove to the front of the move list.
-    // Returns Pair(bestMove, bestScore). If searchAborted fires before any move is fully
-    // evaluated, return the current bestMove unchanged — the caller will discard it.
+    // Root search for one depth. Separated from minimax so bestMove can be tracked here, and so
+    // previousBestMove can be promoted to the front of the list for faster alpha/beta tightening.
     private fun searchRoot(
         game: ChessGame,
         depth: Int,
@@ -133,8 +129,6 @@ class MiniMaxIterativeDeepeningBot(
         return Pair(bestMove, bestScore)
     }
 
-    // Recursive alpha-beta minimax — identical to MiniMaxBot.minimax with one addition:
-    // a periodic time check so the search can be interrupted cleanly at the deadline.
     override fun minimax(
         game: ChessGame,
         depth: Int,
@@ -152,19 +146,17 @@ class MiniMaxIterativeDeepeningBot(
     }
 
     private fun chooseThinkTime(timeLeft: Int): Int {
-        // Allocate ~1/40th of remaining time (assumes ~40 moves still to play).
+        // ~1/40th of remaining time (assumes ~40 moves left to play)
         var thinkTime = timeLeft / 40.0
 
-        // Add increment after the base allocation — this time is recovered after our move,
-        // so it is safe to spend. Cap to maxThinkTime AFTER adding it (previous bug: cap was
-        // applied first, making the effective max maxThinkTime + increment).
+        // Increment is recovered after the move, so it's safe to spend now; cap after adding it
         thinkTime += increment
 
         if (useMaxTime) {
             thinkTime = minOf(thinkTime, maxThinkTime.toDouble())
         }
 
-        // Hard safety limit: never spend more than 90% of what's left to avoid flagging.
+        // Never spend more than 90% of remaining time to avoid flagging
         thinkTime = minOf(thinkTime, timeLeft * 0.9)
 
         val minThinkTime = minOf(50.toDouble(), timeLeft * 0.25)

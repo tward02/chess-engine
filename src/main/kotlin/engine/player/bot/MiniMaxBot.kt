@@ -62,8 +62,7 @@ open class MiniMaxBot(
         moveOrderer.reset()
         val startNanos = System.nanoTime()
 
-        // Search the most promising moves first so alpha/beta tighten early and prune the rest.
-        // The root is ply 0; its children are searched at ply 1.
+        // Root is ply 0; search most-promising moves first so alpha/beta tightens early
         for (move in moveOrderer.order(legalMoves, ply = 0)) {
 
             game.makeMove(move)
@@ -113,7 +112,7 @@ open class MiniMaxBot(
         val result = game.getGameResult()
 
         if (result != null) {
-            // Add the remaining depth so mates found earlier in the search score better
+            // Earlier mates score higher (depth bonus rewards finding them sooner)
             return when {
                 result.isDraw() -> 0
                 result == GameResult.WHITE_WIN -> CHECKMATE_SCORE + depth
@@ -142,7 +141,6 @@ open class MiniMaxBot(
                 currentAlpha = maxOf(currentAlpha, best)
 
                 if (currentBeta <= currentAlpha) {
-                    // This move refuted the position; let the orderer learn from the cutoff
                     moveOrderer.onBetaCutoff(move, ply, depth)
                     break
                 }

@@ -11,8 +11,7 @@ data class BookMove(val moveStr: String, val numTimesPlayed: Int)
 
 class OpeningBook(file: String) {
 
-    // Parsed once per file and shared; the map is read-only after parsing, so it is
-    // safe to reuse across the many bot instances a tournament creates
+    // Parsed once per file path and cached read-only; safe to share across many bot instances
     val movesByPosition: Map<String, List<BookMove>> = parsedBooks.getOrPut(file) { parse(file) }
 
     fun hasBookMove(fen: String): Boolean {

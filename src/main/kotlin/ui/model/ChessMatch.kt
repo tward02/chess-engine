@@ -38,16 +38,14 @@ class ChessMatch(
     var moveVersion by mutableIntStateOf(0)
         private set
 
-    // Observable mirror of the board's active colour so the UI (e.g. the clock highlight)
-    // recomposes when the turn changes; the board's own field is not Compose state
+    // Compose-observable mirror of the board's active colour; the board's own field is not Compose state
     var activeColour by mutableStateOf(game.board.activeColour)
         private set
 
     var animatingMove by mutableStateOf<Move?>(null)
         private set
 
-    // The piece being captured by the animating move and the square it sits on, kept visible
-    // until the moving piece arrives. The square differs from the destination for en passant.
+    // Kept visible until the moving piece arrives; square differs from destination for en passant
     var animatingCapture by mutableStateOf<AnimatingCapture?>(null)
         private set
 
@@ -106,11 +104,8 @@ class ChessMatch(
         }
     }
 
-    /**
-     * Ends the game the moment the side to move runs out of time, without waiting for them to play.
-     * [checkGameOver] only sees the stored clock, which updates on a move; this reads the live clock
-     * (elapsed since the move started), so it must be polled while a player is thinking.
-     */
+    // Unlike checkGameOver, reads the live clock (elapsed since move started) rather than the
+    // stored snapshot, so flagging is detected immediately rather than on the next move.
     fun checkTimeout() {
 
         if (uiState.gameResult != null) return

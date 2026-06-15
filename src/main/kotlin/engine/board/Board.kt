@@ -211,7 +211,7 @@ class Board {
         return pieces
     }
 
-    //Note this will find the first piece of the given type and colour if there are multiple
+    // Returns the first match; duplicates are possible (e.g. promoted queens)
     fun findPiece(piece: Piece): Square? {
         for (row in 0..7) {
             for (col in 0..7) {

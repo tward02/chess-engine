@@ -1,11 +1,9 @@
 package com.tward.engine.board
 
 /**
- * Produces a short, human-readable description of a move for logging, e.g.
- * "e2-e4", "Ng1-f3", "Bf1xc4", "e7-e8=Q", "exd6 e.p.", "O-O+", "Qd8-h4#".
+ * Produces human-readable move notation, e.g. "Ng1-f3", "e7-e8=Q", "exd6 e.p.", "O-O+", "Qd8-h4#".
  *
- * Pure and board-independent: en passant, check and checkmate can't be inferred from a
- * [Move] alone, so the caller supplies them.
+ * En passant, check and checkmate can't be inferred from a [Move] alone, so the caller provides them.
  */
 object MoveDescriber {
 

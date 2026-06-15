@@ -12,18 +12,15 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
-// A named contender. The factory makes a fresh bot for a colour, because bots carry
-// per-game state (e.g. opening-book progress) and so must not be shared between games
+// Factory-per-game: bots carry per-game state (opening-book progress) and must not be shared
 class BotSpec(
     val name: String,
     val createBot: (Colour) -> ChessBot
 )
 
 /**
- * Plays [totalGames] between two bots, alternating colours, running [concurrency] games
- * at once on a dedicated thread pool. One game can be played through the UI in parallel;
- * both headless workers and the UI claim games from the same pool and report into the
- * same thread-safe tally, so no game is played or counted twice.
+ * Plays [totalGames] between two bots, alternating colours, on a fixed thread pool.
+ * Headless workers and the UI both claim from the same pool, so no game is counted twice.
  */
 class Tournament(
     val specA: BotSpec,
@@ -38,7 +35,6 @@ class Tournament(
 
     private val log = Log.of<Tournament>()
 
-    // Log a progress line roughly every 10% of the run
     private val progressStep = (totalGames / 10).coerceAtLeast(1)
 
     private val nextIndex = AtomicInteger(0)
@@ -58,13 +54,13 @@ class Tournament(
     val whiteWinsCount: Int get() = whiteWins.get()
     val blackWinsCount: Int get() = blackWins.get()
 
-    // Claims the next game to play, or -1 once every game has been handed out
+    /** Returns the next game index to play, or -1 when all games have been claimed. */
     fun claimGameIndex(): Int {
         val index = nextIndex.getAndIncrement()
         return if (index < totalGames) index else -1
     }
 
-    // Contenders alternate colours by game index so each plays White half the time
+    /** Even index: specA plays White. Odd index: specB plays White. */
     fun colourAssignment(index: Int): Pair<BotSpec, BotSpec> {
         return if (index % 2 == 0) specA to specB else specB to specA
     }
@@ -106,7 +102,7 @@ class Tournament(
             "${specB.name}: ${botBWins}W/${botAWins}L/${drawCount}D (${"%.1f".format(bScore)} pts)"
     }
 
-    // Runs the headless games across the thread pool, suspending until they are all done
+    /** Runs all headless games on the thread pool, suspending until complete. */
     suspend fun runHeadlessWorkers() {
 
         log.info { "Tournament starting: ${specA.name} vs ${specB.name}, $totalGames games on $concurrency threads" }
@@ -156,7 +152,7 @@ class Tournament(
             val move = bot.chooseMove(game, timeLeft)
 
             if (timed) {
-                // Charge the actual thinking time to the mover; flagging is an immediate loss
+                // Charge actual thinking time; running to zero is an immediate loss
                 val elapsedMs = ((System.nanoTime() - startNanos) / 1_000_000).toInt()
                 if (whiteToMove) {
                     whiteTime -= elapsedMs
