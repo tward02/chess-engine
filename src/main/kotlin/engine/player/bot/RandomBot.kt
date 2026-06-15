@@ -7,12 +7,11 @@ import kotlin.random.Random
 
 class RandomBot : ChessBot {
 
-    override fun chooseMove(game: ChessGame): Move {
+    override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
         val legalMoves = game.getLegalMoves()
         if (legalMoves.isEmpty()) {
             throw IllegalStateException("Cannot move, in checkmate")
         }
         return legalMoves.random(Random.Default)
     }
-
 }

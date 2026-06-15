@@ -12,9 +12,9 @@ import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.player.ordering.MoveOrderer
 import com.tward.logging.Log
 
-private const val CHECKMATE_SCORE = 100000
+const val CHECKMATE_SCORE = 100000
 
-class MiniMaxBot(
+open class MiniMaxBot(
     private val depth: Int,
     private val colour: Colour,
     private val aggression: Int = 10,
@@ -33,9 +33,9 @@ class MiniMaxBot(
     // Positions searched for the current move; the bot is single-threaded per game so a plain field
     // is safe. Exposed (read-only) so the effect of move ordering can be measured.
     var nodesSearched = 0
-        private set
+        protected set
 
-    override fun chooseMove(game: ChessGame): Move {
+    override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
 
         val legalMoves = game.getLegalMoves()
 
@@ -99,7 +99,7 @@ class MiniMaxBot(
         return chosen
     }
 
-    private fun minimax(
+    protected open fun minimax(
         game: ChessGame,
         depth: Int,
         alpha: Int,

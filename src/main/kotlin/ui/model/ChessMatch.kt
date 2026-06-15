@@ -127,7 +127,6 @@ class ChessMatch(
     }
 
 
-
     fun makeMove(move: Move, animate: Boolean = true) {
 
         if (game.isGameOver()) return
@@ -135,8 +134,8 @@ class ChessMatch(
         // Captured pawn is off the destination square, so detect en passant before applying
         val isEnPassant =
             move.piece?.type == PieceType.PAWN &&
-                move.capturedPiece != null &&
-                game.board.enPassantTarget == move.to
+                    move.capturedPiece != null &&
+                    game.board.enPassantTarget == move.to
 
         game.makeMove(move)
 

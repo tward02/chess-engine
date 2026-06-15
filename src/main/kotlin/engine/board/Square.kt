@@ -10,8 +10,8 @@ data class Square(val col: Int, val row: Int) {
         val file = ('a' + col).toString()
         val rank = (8 - row).toString()
         return (
-            file + rank
-        )
+                file + rank
+                )
     }
 
     fun getSquareType(): SquareType {

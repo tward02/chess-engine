@@ -115,7 +115,8 @@ class ChessGame(val board: Board) {
     }
 
     fun findMove(from: String, to: String): Move? {
-        return MoveGenerator(board).generateLegalMoves().firstOrNull { it.from.toString() == from && it.to.toString() == to }
+        return MoveGenerator(board).generateLegalMoves()
+            .firstOrNull { it.from.toString() == from && it.to.toString() == to }
     }
 
     fun copy(): ChessGame {

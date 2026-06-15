@@ -30,7 +30,10 @@ class Tournament(
     val specB: BotSpec,
     val totalGames: Int,
     val concurrency: Int = (Runtime.getRuntime().availableProcessors() - 1).coerceAtLeast(1),
-    private val maxPlies: Int = 400
+    private val maxPlies: Int = 400,
+    // Per-side time budget in milliseconds, passed to the bots so time-aware bots (e.g. iterative
+    // deepening) know how long they have. 0 means "untimed" — bots are given 0 and never flag.
+    val initialTimeMillis: Int = 0
 ) {
 
     private val log = Log.of<Tournament>()
@@ -136,13 +139,35 @@ class Tournament(
 
         val game = ChessGame(Board.getStartingBoard())
 
+        val timed = initialTimeMillis > 0
+        var whiteTime = initialTimeMillis
+        var blackTime = initialTimeMillis
+
         var plies = 0
         while (plies < maxPlies) {
             val result = game.getGameResult()
             if (result != null) return result
 
-            val bot = if (game.board.activeColour == Colour.WHITE) whiteBot else blackBot
-            game.makeMove(bot.chooseMove(game))
+            val whiteToMove = game.board.activeColour == Colour.WHITE
+            val bot = if (whiteToMove) whiteBot else blackBot
+            val timeLeft = if (whiteToMove) whiteTime else blackTime
+
+            val startNanos = System.nanoTime()
+            val move = bot.chooseMove(game, timeLeft)
+
+            if (timed) {
+                // Charge the actual thinking time to the mover; flagging is an immediate loss
+                val elapsedMs = ((System.nanoTime() - startNanos) / 1_000_000).toInt()
+                if (whiteToMove) {
+                    whiteTime -= elapsedMs
+                    if (whiteTime <= 0) return GameResult.BLACK_TIME_WIN
+                } else {
+                    blackTime -= elapsedMs
+                    if (blackTime <= 0) return GameResult.WHITE_TIME_WIN
+                }
+            }
+
+            game.makeMove(move)
             plies++
         }
 

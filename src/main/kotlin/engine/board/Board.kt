@@ -85,7 +85,7 @@ class Board {
     fun makeMove(move: Move) {
 
         saveSate()
-         var movingPiece = getPiece(move.from)
+        var movingPiece = getPiece(move.from)
 
         if (move.promotionType != null) {
             movingPiece = Piece(move.promotionType, movingPiece!!.colour)
@@ -146,7 +146,7 @@ class Board {
 
         var movedPiece = getPiece(move.to)
 
-        if  (move.promotionType != null) {
+        if (move.promotionType != null) {
             movedPiece = Piece(PieceType.PAWN, movedPiece!!.colour)
         }
 
@@ -220,7 +220,7 @@ class Board {
                     getPiece(Square(col, row))
 
                 if (foundPiece != null && foundPiece.type == piece.type && foundPiece.colour == piece.colour) {
-                    return Square(col ,row)
+                    return Square(col, row)
                 }
             }
         }

@@ -7,8 +7,8 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.player.bot.MiniMaxBot
+import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
 import com.tward.engine.player.evaluator.AdaptiveEvaluator
-import com.tward.engine.player.evaluator.StandardEvaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
@@ -37,15 +37,24 @@ fun main() = application {
 
     // Each spec builds a fresh bot per game (bots hold per-game state, so they can't be shared).
     // The opening book gives the deterministic minimax search varied openings across games.
-    val specA = BotSpec("MiniMax Phased Evaluator") { colour ->
-        MiniMaxBot(depth = 4, colour = colour, evaluator = AdaptiveEvaluator(), moveOrderer = KillerHistoryMoveOrderer())
+    val specA = BotSpec("MiniMax") { colour ->
+        MiniMaxBot(
+            depth = 4,
+            colour = colour,
+            evaluator = AdaptiveEvaluator(),
+            moveOrderer = KillerHistoryMoveOrderer()
+        )
     }
 
-    val specB = BotSpec("MiniMax") { colour ->
-        MiniMaxBot(depth = 4, colour = colour, evaluator = StandardEvaluator(), moveOrderer = KillerHistoryMoveOrderer())
+    val specB = BotSpec("MiniMax Iterative Deepening") { colour ->
+        MiniMaxIterativeDeepeningBot(
+            colour = colour,
+            evaluator = AdaptiveEvaluator(),
+            moveOrderer = KillerHistoryMoveOrderer()
+        )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 1000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
 
     Window(
         onCloseRequest = ::exitApplication,

@@ -13,7 +13,8 @@ import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.Player
 import com.tward.engine.player.bot.MiniMaxBot
-import com.tward.engine.player.evaluator.StandardEvaluator
+import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
+import com.tward.engine.player.evaluator.AdaptiveEvaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.logging.Log
 import com.tward.logging.LogConfig
@@ -21,7 +22,6 @@ import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
 import com.tward.ui.views.BoardView
-import java.util.logging.Level
 
 /**
  * Head-to-head application: a single game shown on the board.
@@ -33,20 +33,31 @@ import java.util.logging.Level
 fun main() = application {
 
     // Raise to Level.FINE to also see per-move, book-move and bot-search detail
-    LogConfig.configure(Level.WARNING)
+    LogConfig.configure()
 
     val log = Log.of("com.tward.app.GameApp")
     log.info { "Starting head-to-head game" }
 
     // --- Configure the match here ---
     val whitePlayer: Player = BotPlayer(
-        MiniMaxBot(depth = 5, colour = Colour.WHITE, evaluator = StandardEvaluator(), moveOrderer = KillerHistoryMoveOrderer()), name = "MiniMax 1")
+        MiniMaxBot(
+            depth = 5,
+            colour = Colour.WHITE,
+            evaluator = AdaptiveEvaluator(),
+            moveOrderer = KillerHistoryMoveOrderer()
+        ), name = "MiniMax"
+    )
     val blackPlayer: Player = BotPlayer(
-        MiniMaxBot(depth = 5, colour = Colour.BLACK, evaluator = StandardEvaluator(), moveOrderer = KillerHistoryMoveOrderer()), name = "MiniMax 2")
+        MiniMaxIterativeDeepeningBot(
+            colour = Colour.BLACK,
+            evaluator = AdaptiveEvaluator(),
+            moveOrderer = KillerHistoryMoveOrderer()
+        ), name = "MiniMax Iterative Deepening"
+    )
     // Other setups:
     //   Bot vs bot     -> BotPlayer(MiniMaxBot(... WHITE ...)) and BotPlayer(MiniMaxBot(... BLACK ...))
     //   Human vs human -> HumanPlayer() and HumanPlayer()
-    val timeControl = TimeControl(initialMillis = 300_000, incrementMillis = 200)
+    val timeControl = TimeControl(initialMillis = 120_000, incrementMillis = 200)
     // --------------------------------
 
     val match = ChessMatch(

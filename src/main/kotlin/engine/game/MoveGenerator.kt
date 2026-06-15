@@ -155,7 +155,11 @@ class MoveGenerator(private val board: Board) {
                 }
             }
 
-            if (board.whiteCanCastleQueenside && board.getPiece(Square(0, row)) == Piece(PieceType.ROOK, Colour.WHITE)) {
+            if (board.whiteCanCastleQueenside && board.getPiece(Square(0, row)) == Piece(
+                    PieceType.ROOK,
+                    Colour.WHITE
+                )
+            ) {
 
                 if (board.getPiece(Square(1, row)) == null &&
                     board.getPiece(Square(2, row)) == null &&
@@ -189,7 +193,11 @@ class MoveGenerator(private val board: Board) {
                 }
             }
 
-            if (board.blackCanCastleQueenside && board.getPiece(Square(0, row)) == Piece(PieceType.ROOK, Colour.BLACK)) {
+            if (board.blackCanCastleQueenside && board.getPiece(Square(0, row)) == Piece(
+                    PieceType.ROOK,
+                    Colour.BLACK
+                )
+            ) {
 
                 if (board.getPiece(Square(1, row)) == null &&
                     board.getPiece(Square(2, row)) == null &&

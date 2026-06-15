@@ -129,8 +129,9 @@ fun BoardView(
         // The next player (bot or human) may not move until the animation has finished
         if (animatingMove != null) return@LaunchedEffect
 
+        val activeColour = match.game.board.activeColour
         val currentPlayer =
-            if (match.game.board.activeColour == Colour.WHITE) {
+            if (activeColour == Colour.WHITE) {
                 match.whitePlayer
             } else {
                 match.blackPlayer
@@ -140,13 +141,23 @@ fun BoardView(
 
             delay(200.milliseconds)
 
+            // The remaining time on the mover's clock, read just before it starts thinking, so a
+            // time-aware bot can budget its search
+            val timeLeft = (
+                if (activeColour == Colour.WHITE) {
+                    match.clockManager.currentWhite()
+                } else {
+                    match.clockManager.currentBlack()
+                }
+                ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+
             val move =
                 withContext(Dispatchers.Default) {
 
                     val searchGame =
                         match.game.copy()
 
-                    currentPlayer.bot.chooseMove(searchGame)
+                    currentPlayer.bot.chooseMove(searchGame, timeLeft)
                 }
 
             match.makeMove(move)
@@ -259,7 +270,7 @@ fun BoardView(
                                     match.uiState.selectedSquare == square
 
                                 val isLegalTarget = showLegalMoves &&
-                                    square in match.uiState.legalTargets
+                                        square in match.uiState.legalTargets
 
                                 val type = square.getSquareType()
 

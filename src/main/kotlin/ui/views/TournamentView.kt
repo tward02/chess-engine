@@ -122,7 +122,15 @@ fun TournamentView(tournament: Tournament) {
 }
 
 @Composable
-private fun ResultsPanel(tournament: Tournament, aWins: Int, bWins: Int, draws: Int, completed: Int, whiteWins: Int, blackWins: Int) {
+private fun ResultsPanel(
+    tournament: Tournament,
+    aWins: Int,
+    bWins: Int,
+    draws: Int,
+    completed: Int,
+    whiteWins: Int,
+    blackWins: Int
+) {
 
     val total = tournament.totalGames
     val isComplete = completed >= total
@@ -243,10 +251,14 @@ private fun buildDisplayMatch(tournament: Tournament, index: Int): ChessMatch {
 
     val (whiteSpec, blackSpec) = tournament.colourAssignment(index)
 
+    // Use tournament time if set, otherwise fall back to the long display-only clock
+    val displayTime = if (tournament.initialTimeMillis > 0) tournament.initialTimeMillis.toLong()
+                      else DISPLAY_TIME_MILLIS
+
     return ChessMatch(
         ChessGame(Board.getStartingBoard()),
         BotPlayer(whiteSpec.createBot(Colour.WHITE), whiteSpec.name),
         BotPlayer(blackSpec.createBot(Colour.BLACK), blackSpec.name),
-        ClockManager(TimeControl(DISPLAY_TIME_MILLIS, 0))
+        ClockManager(TimeControl(displayTime, 0))
     )
 }

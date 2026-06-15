@@ -1,10 +1,14 @@
 package engine.tournament
 
+import com.tward.engine.board.Move
+import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
+import com.tward.engine.player.ChessBot
 import com.tward.engine.player.bot.RandomBot
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -12,6 +16,17 @@ import kotlin.test.assertTrue
 class TournamentTest {
 
     private fun randomSpec(name: String) = BotSpec(name) { RandomBot() }
+
+    // A bot that records every timeLeft it is given, then plays the first legal move
+    private fun recordingSpec(name: String, seen: MutableList<Int>) =
+        BotSpec(name) {
+            object : ChessBot {
+                override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
+                    seen.add(timeLeft)
+                    return game.getLegalMoves().first()
+                }
+            }
+        }
 
     private fun tournament() =
         Tournament(randomSpec("A"), randomSpec("B"), totalGames = 10)
@@ -105,5 +120,73 @@ class TournamentTest {
         assertEquals(0, tournament.botBWins)
         assertEquals(1, tournament.drawCount)
         assertEquals(1, tournament.completedGames)
+    }
+
+    @Test
+    fun `the time budget is passed to the bot, starting at the full amount`() {
+
+        val seen = CopyOnWriteArrayList<Int>()
+
+        val tournament = Tournament(
+            recordingSpec("rec", seen),
+            randomSpec("opp"),
+            totalGames = 1,
+            concurrency = 1,
+            initialTimeMillis = 60_000
+        )
+
+        runBlocking { tournament.runHeadlessWorkers() }
+
+        // The recorder plays White (game 0), so its first move sees the whole budget
+        assertEquals(60_000, seen.first())
+        // And the remaining time never grows above the budget
+        assertTrue(seen.all { it <= 60_000 })
+    }
+
+    @Test
+    fun `with no time budget the bot is given zero`() {
+
+        val seen = CopyOnWriteArrayList<Int>()
+
+        val tournament = Tournament(
+            recordingSpec("rec", seen),
+            randomSpec("opp"),
+            totalGames = 1,
+            concurrency = 1
+            // initialTimeMillis defaults to 0
+        )
+
+        runBlocking { tournament.runHeadlessWorkers() }
+
+        assertTrue(seen.isNotEmpty())
+        assertTrue(seen.all { it == 0 })
+    }
+
+    @Test
+    fun `a bot that exceeds its time forfeits`() {
+
+        // White takes far longer than its tiny budget, so it flags on its first move
+        val slowWhite = BotSpec("slow") {
+            object : ChessBot {
+                override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
+                    Thread.sleep(50)
+                    return game.getLegalMoves().first()
+                }
+            }
+        }
+
+        val tournament = Tournament(
+            slowWhite,
+            randomSpec("fast"),
+            totalGames = 1,
+            concurrency = 1,
+            initialTimeMillis = 10
+        )
+
+        runBlocking { tournament.runHeadlessWorkers() }
+
+        // slow is White (game 0) and flags, so fast (specB) takes the win
+        assertEquals(0, tournament.botAWins)
+        assertEquals(1, tournament.botBWins)
     }
 }

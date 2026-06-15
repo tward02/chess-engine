@@ -8,7 +8,7 @@ sealed interface Player {
 }
 
 interface ChessBot {
-    fun chooseMove(game: ChessGame): Move
+    fun chooseMove(game: ChessGame, timeLeft: Int = 0): Move
 }
 
 class HumanPlayer(override val name: String) : Player
