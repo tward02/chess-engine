@@ -9,6 +9,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.player.bot.MiniMaxBot
 import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
 import com.tward.engine.player.evaluator.AdaptiveEvaluator
+import com.tward.engine.player.evaluator.PositionalEvaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
@@ -35,17 +36,17 @@ fun main() = application {
     )
 
     // Each spec builds a fresh bot per game; the opening book gives varied openings across games
-    val specA = BotSpec("MiniMax") { colour ->
-        MiniMaxBot(
-            depth = 4,
+    val specA = BotSpec("Position Evaluator") { colour ->
+        MiniMaxIterativeDeepeningBot(
             colour = colour,
-            evaluator = AdaptiveEvaluator(),
+            evaluator = PositionalEvaluator(),
             moveOrderer = KillerHistoryMoveOrderer()
         )
     }
 
-    val specB = BotSpec("MiniMax Iterative Deepening") { colour ->
-        MiniMaxIterativeDeepeningBot(
+    val specB = BotSpec("MiniMaxDepth 4") { colour ->
+        MiniMaxBot(
+            depth = 4,
             colour = colour,
             evaluator = AdaptiveEvaluator(),
             moveOrderer = KillerHistoryMoveOrderer()

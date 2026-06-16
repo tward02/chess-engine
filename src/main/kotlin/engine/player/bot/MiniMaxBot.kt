@@ -40,14 +40,9 @@ open class MiniMaxBot(
         val legalMoves = game.getLegalMoves()
 
         if (numberOfOpeningMoves < 5 && useOpeningBookMoves) {
-            numberOfOpeningMoves++
-            val fen = game.board.toFEN(isFullFEN = false)
-
-            openingBook.getBookMove(fen)?.moveStr?.let { bookMoveStr ->
-                legalMoves.firstOrNull { it.toAlgebraic() == bookMoveStr }?.let {
-                    log.debug { "$colour played book move ${it.toAlgebraic()} (move ${numberOfOpeningMoves})" }
-                    return it
-                }
+            val bookMove = getBookMove(game, legalMoves)
+            if (bookMove != null) {
+                return bookMove
             }
         }
 
@@ -96,6 +91,20 @@ open class MiniMaxBot(
         }
 
         return chosen
+    }
+
+    protected open fun getBookMove(game: ChessGame, legalMoves: List<Move>): Move? {
+        numberOfOpeningMoves++
+        val fen = game.board.toFEN(isFullFEN = false)
+
+        openingBook.getBookMove(fen)?.moveStr?.let { bookMoveStr ->
+            legalMoves.firstOrNull { it.toAlgebraic() == bookMoveStr }?.let {
+                log.debug { "$colour played book move ${it.toAlgebraic()} (move ${numberOfOpeningMoves})" }
+                return it
+            }
+        }
+
+        return null
     }
 
     protected open fun minimax(

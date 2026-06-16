@@ -27,7 +27,8 @@ import com.tward.engine.board.*
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
-import com.tward.engine.player.evaluator.AdaptiveEvaluator
+import com.tward.engine.player.evaluator.PositionalEvaluator
+import com.tward.engine.player.evaluator.QuiescenceEvaluator
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.playDoneSound
 import com.tward.ui.playMoveSound
@@ -68,7 +69,9 @@ fun BoardView(
 
     if (showEvaluationBar) {
 
-        val evaluator = remember { AdaptiveEvaluator() }
+        // Quiescence search resolves pending captures before scoring, so the bar no longer swings
+        // mid-exchange (e.g. during a queen trade); PositionalEvaluator supplies the static score.
+        val evaluator = remember { QuiescenceEvaluator(PositionalEvaluator()) }
 
         LaunchedEffect(version) {
 

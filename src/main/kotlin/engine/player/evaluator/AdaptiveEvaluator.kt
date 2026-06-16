@@ -13,7 +13,7 @@ import com.tward.engine.game.ChessGame
  * Not thread-safe — [phase] is computed once per [evaluate] and stored for the hook overrides
  * to read. Give each searching bot its own instance.
  */
-class AdaptiveEvaluator(aggression: Int = 10) : StandardEvaluator(aggression = aggression) {
+open class AdaptiveEvaluator(aggression: Int = 10) : StandardEvaluator(aggression = aggression) {
 
     private var phase: Int = PieceSquareTables.MAX_PHASE
 

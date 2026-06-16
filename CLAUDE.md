@@ -79,6 +79,10 @@ Small facade over `java.util.logging`. `Log.of<T>()` → `AppLogger` with lazy `
 
 Every source file must end with a trailing newline.
 
+### Comments
+
+Keep comments clear and concise. Only comment on code that doesn't easily explain itself — skip comments that just restate what the code says. Classes and methods more likely to be public-facing (interfaces, public APIs consumed outside their own file) can carry more detail and KDoc, since callers won't have the implementation in front of them.
+
 ### Compose UI testing
 
 Tests use `runComposeUiTest { setContent {...}; onNodeWithText(...).assertIsDisplayed() }` — no JUnit4 rule needed, coexists with JUnit5. For composables with a perpetual `LaunchedEffect` (e.g. `ChessClock`), set `mainClock.autoAdvance = false` before `setContent` to prevent the test hanging. To avoid loading image resources, test `CapturedPieces` with an empty piece list.
