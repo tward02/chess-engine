@@ -1,4 +1,4 @@
-package com.tward.ui.views
+package com.tward.ui.view.tournament
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,6 +23,7 @@ import com.tward.engine.tournament.Tournament
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
+import com.tward.ui.view.game.BoardView
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 

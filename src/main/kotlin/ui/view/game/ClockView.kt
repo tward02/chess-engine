@@ -1,4 +1,4 @@
-package com.tward.ui.views
+package com.tward.ui.view.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column

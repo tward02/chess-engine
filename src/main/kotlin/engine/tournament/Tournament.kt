@@ -1,8 +1,6 @@
 package com.tward.engine.tournament
 
-import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
-import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.ChessBot
 import com.tward.logging.Log
@@ -130,48 +128,10 @@ class Tournament(
 
     private fun playToEnd(index: Int): GameResult {
         val (whiteSpec, blackSpec) = colourAssignment(index)
-        val whiteBot = whiteSpec.createBot(Colour.WHITE)
-        val blackBot = blackSpec.createBot(Colour.BLACK)
-
-        val game = ChessGame(Board.getStartingBoard())
-
-        val timed = initialTimeMillis > 0
-        var whiteTime = initialTimeMillis
-        var blackTime = initialTimeMillis
-
-        var plies = 0
-        while (plies < maxPlies) {
-            val result = game.getGameResult()
-            if (result != null) return result
-
-            val whiteToMove = game.board.activeColour == Colour.WHITE
-            val bot = if (whiteToMove) whiteBot else blackBot
-            val timeLeft = if (whiteToMove) whiteTime else blackTime
-
-            val startNanos = System.nanoTime()
-            val move = bot.chooseMove(game, timeLeft)
-
-            if (timed) {
-                // Charge actual thinking time; running to zero is an immediate loss
-                val elapsedMs = ((System.nanoTime() - startNanos) / 1_000_000).toInt()
-                if (whiteToMove) {
-                    whiteTime -= elapsedMs
-                    if (whiteTime <= 0) return GameResult.BLACK_TIME_WIN
-                } else {
-                    blackTime -= elapsedMs
-                    if (blackTime <= 0) return GameResult.WHITE_TIME_WIN
-                }
-            }
-
-            game.makeMove(move)
-            plies++
-        }
-
-        // A game that never resolves within the ply cap is adjudicated a draw
-        return GameResult.DRAW_50_MOVE_RULE
+        return playGame(whiteSpec, blackSpec, maxPlies, initialTimeMillis)
     }
 
     private fun isWhiteWin(result: GameResult): Boolean {
-        return result == GameResult.WHITE_WIN || result == GameResult.WHITE_TIME_WIN
+        return winner(result) == Colour.WHITE
     }
 }

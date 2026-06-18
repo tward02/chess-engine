@@ -21,7 +21,7 @@ import com.tward.logging.LogConfig
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
-import com.tward.ui.views.BoardView
+import com.tward.ui.view.game.BoardView
 
 /**
  * Single-game application. Configure [whitePlayer] and [blackPlayer] below as any mix of

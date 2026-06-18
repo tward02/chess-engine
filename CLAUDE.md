@@ -8,8 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run the chess game UI (default)
 .\gradlew.bat run
 
-# Run the tournament UI (switch main class temporarily in build.gradle)
+# Run the 2-bot A/B tournament UI (switch main class temporarily in build.gradle)
 # compose.desktop { application { mainClass = 'com.tward.app.TournamentAppKt' } }
+.\gradlew.bat run
+
+# Run the multi-bot tournament UI (round-robin / knockout / Swiss; switch main class)
+# compose.desktop { application { mainClass = 'com.tward.app.MultiBotTournamentAppKt' } }
 .\gradlew.bat run
 
 # Build (compile only)
@@ -34,7 +38,7 @@ Long-running tests are tagged `@LongRunning` (`utils.LongRunning` annotation →
 
 ## Architecture
 
-Kotlin + Compose Desktop application targeting JVM 21. Two entry points in `com.tward.app`: `GameApp.kt` (human vs. bot game UI) and `TournamentApp.kt` (bot vs. bot tournament UI). The `compose.desktop.mainClass` in `build.gradle` selects which runs.
+Kotlin + Compose Desktop application targeting JVM 21. Three entry points in `com.tward.app`: `GameApp.kt` (human vs. bot game UI), `TournamentApp.kt` (2-bot A/B tournament UI), and `MultiBotTournamentApp.kt` (3+ bot tournament UI with formats). The `compose.desktop.mainClass` in `build.gradle` selects which runs.
 
 ### Engine (`com.tward.engine`)
 
@@ -61,11 +65,13 @@ Kotlin + Compose Desktop application targeting JVM 21. Two entry points in `com.
 
 **Opening book** (`engine.openingBook`): `OpeningBook` caches parsed books per file path in a companion `ConcurrentHashMap`, so constructing many bots is cheap.
 
-**Tournament** (`engine.tournament`): `BotSpec(name, createBot: (Colour)->ChessBot)` factory + `Tournament` that runs `totalGames` headless across a fixed thread pool. Games are claimed from a shared `AtomicInteger`; results tallied into atomics. Contenders alternate colours by game index. Keep `useOpeningBookMoves` enabled — bots are deterministic so the book provides variety. Always use **fresh bot instances per game** (bots hold per-game state like opening-book progress).
+**Tournament** (`engine.tournament`): `BotSpec(name, createBot: (Colour)->ChessBot)` factory + `Tournament` that runs `totalGames` headless across a fixed thread pool. Games are claimed from a shared `AtomicInteger`; results tallied into atomics. Contenders alternate colours by game index. Keep `useOpeningBookMoves` enabled — bots are deterministic so the book provides variety. Always use **fresh bot instances per game** (bots hold per-game state like opening-book progress). `GamePlay.kt` holds the shared `playGame(white, black, maxPlies, initialTimeMillis)` loop and `winner(result)` helper used by both tournament runners.
+
+**Multi-bot tournament** (`engine.tournament`): generalises the above to 3+ contenders. `TournamentFormat` is a pure function `nextRound(contenders, history) -> List<Pairing>` (empty ⇒ finished), with `RoundRobinFormat(doubleRound)` (circle method, static), `KnockoutFormat(tiebreak)` (single-elimination; draws broken by seed via `KnockoutTiebreak`, not replay, to guarantee termination between draw-prone bots), and `SwissFormat(rounds)` (score-based pairing avoiding rematches). `Standings.from(contenders, history)` derives the ranked leaderboard purely (win=1, draw=0.5, bye=1). `MultiBotTournament` plays each round concurrently then waits for the whole round to be recorded before asking for the next (adaptive formats need every result first); with `reserveOneForDisplay=true` it holds one shuffled game per round back for the UI to drive live. The formats/standings are pure and unit-tested; the runner is tested headlessly like `Tournament`.
 
 ### UI (`com.tward.ui`)
 
-Compose Desktop views. `BoardView` accepts `showResultDialog` and `onGameOver` params used by the tournament display. `TournamentView` shows one live game (via `BoardView`) while headless workers run; both claim from the same game pool so counts are never double-counted. `ChessMatch` is the UI-layer game model; `ClockManager` drives the chess clock.
+Compose Desktop views. `BoardView` accepts `showResultDialog` and `onGameOver` params used by the tournament display. `TournamentView` shows one live game (via `BoardView`) while headless workers run; both claim from the same game pool so counts are never double-counted. `MultiBotTournamentView` shows one randomly chosen live game of the current round (the engine's reserved game) alongside a live standings table polled from `MultiBotTournament.standings()`. `ChessMatch` is the UI-layer game model; `ClockManager` drives the chess clock.
 
 ### Logging (`com.tward.logging`)
 

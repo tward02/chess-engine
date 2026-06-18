@@ -16,4 +16,3 @@ class HumanPlayer(override val name: String) : Player
 class BotPlayer(
     val bot: ChessBot, override val name: String
 ) : Player
-

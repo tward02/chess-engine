@@ -1,4 +1,4 @@
-package ui
+package ui.model
 
 import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
@@ -381,5 +381,4 @@ class ChessMatchTest {
             )
         )
     }
-
 }

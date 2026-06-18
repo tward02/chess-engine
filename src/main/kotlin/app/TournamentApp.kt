@@ -15,7 +15,7 @@ import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
 import com.tward.logging.LogConfig
-import com.tward.ui.views.TournamentView
+import com.tward.ui.view.tournament.TournamentView
 
 /**
  * Tournament application: plays two bots against each other many times to measure their

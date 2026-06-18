@@ -1,4 +1,4 @@
-package ui
+package ui.view.game
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -7,8 +7,8 @@ import androidx.compose.ui.test.runComposeUiTest
 import com.tward.engine.board.Colour
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
-import com.tward.ui.views.CapturedPieces
-import com.tward.ui.views.ChessClock
+import com.tward.ui.view.game.CapturedPieces
+import com.tward.ui.view.game.ChessClock
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)

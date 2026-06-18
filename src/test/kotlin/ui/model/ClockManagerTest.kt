@@ -1,10 +1,9 @@
-package ui
+package ui.model
 
 import com.tward.engine.board.Colour
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 class ClockManagerTest {
@@ -24,8 +23,8 @@ class ClockManagerTest {
 
         currentTime = 5_000
 
-        assertEquals(55_000, manager.currentWhite())
-        assertEquals(60_000, manager.currentBlack())
+        Assertions.assertEquals(55_000, manager.currentWhite())
+        Assertions.assertEquals(60_000, manager.currentBlack())
     }
 
     @Test
@@ -45,8 +44,8 @@ class ClockManagerTest {
 
         manager.onMovePlayed()
 
-        assertEquals(56_000, manager.whiteMillis)
-        assertEquals(60_000, manager.blackMillis)
+        Assertions.assertEquals(56_000, manager.whiteMillis)
+        Assertions.assertEquals(60_000, manager.blackMillis)
     }
 
     @Test
@@ -66,7 +65,7 @@ class ClockManagerTest {
 
         manager.onMovePlayed()
 
-        assertEquals(57_000, manager.whiteMillis)
+        Assertions.assertEquals(57_000, manager.whiteMillis)
     }
 
     @Test
@@ -86,8 +85,8 @@ class ClockManagerTest {
 
         currentTime = 3_000
 
-        assertEquals(57_000, manager.currentBlack())
-        assertEquals(60_000, manager.currentWhite())
+        Assertions.assertEquals(57_000, manager.currentBlack())
+        Assertions.assertEquals(60_000, manager.currentWhite())
     }
 
     @Test
@@ -109,8 +108,8 @@ class ClockManagerTest {
         currentTime = 8_000
         manager.onMovePlayed()
 
-        assertEquals(56_000, manager.whiteMillis)
-        assertEquals(58_000, manager.blackMillis)
+        Assertions.assertEquals(56_000, manager.whiteMillis)
+        Assertions.assertEquals(58_000, manager.blackMillis)
     }
 
     @Test
@@ -128,7 +127,7 @@ class ClockManagerTest {
 
         currentTime = 5_000
 
-        assertEquals(0, manager.currentWhite())
+        Assertions.assertEquals(0, manager.currentWhite())
     }
 
     @Test
@@ -147,7 +146,7 @@ class ClockManagerTest {
 
         currentTime = 5_000
 
-        assertEquals(0, manager.currentBlack())
+        Assertions.assertEquals(0, manager.currentBlack())
     }
 
     @Test
@@ -167,7 +166,7 @@ class ClockManagerTest {
 
         manager.onMovePlayed()
 
-        assertEquals(0, manager.whiteMillis)
+        Assertions.assertEquals(0, manager.whiteMillis)
     }
 
     @Test
@@ -189,7 +188,7 @@ class ClockManagerTest {
 
         manager.onMovePlayed()
 
-        assertEquals(0, manager.blackMillis)
+        Assertions.assertEquals(0, manager.blackMillis)
     }
 
     @Test
@@ -213,7 +212,7 @@ class ClockManagerTest {
 
         currentTime = 20_000
 
-        assertEquals(beforeStop, manager.currentWhite())
+        Assertions.assertEquals(beforeStop, manager.currentWhite())
     }
 
     @Test
@@ -228,6 +227,6 @@ class ClockManagerTest {
 
         manager.stopClock()
 
-        assertTrue(manager.stopped)
+        Assertions.assertTrue(manager.stopped)
     }
 }
