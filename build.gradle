@@ -61,3 +61,22 @@ compose.desktop {
         mainClass = 'com.tward.app.GameAppKt'
     }
 }
+
+// Builds a standalone runnable jar for the UCI bridge (com.tward.app.UciAppKt).
+// The UCI path needs no Compose, so `java -jar build/libs/uci-engine.jar` speaks UCI
+// over stdin/stdout — the command lichess-bot (and UCI GUIs) invoke. See UCI_LICHESS.md.
+tasks.register('uciJar', Jar) {
+    archiveBaseName = 'uci-engine'
+    archiveVersion = ''
+    manifest {
+        attributes 'Main-Class': 'com.tward.app.UciAppKt'
+    }
+    from sourceSets.main.output
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
+    }
+    // Drop signature files from bundled deps so the merged jar stays loadable.
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
