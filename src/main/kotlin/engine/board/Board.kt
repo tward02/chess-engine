@@ -6,6 +6,11 @@ class Board {
 
     private val grid: Array<Array<Piece?>> = Array(8) { Array(8) { null } }
 
+    // Cached king square per colour (index by Colour.ordinal), kept current by [setPiece] whenever a
+    // king is placed. A pure optimisation for [findKing] on the search hot path; [findKing] validates
+    // the cache and falls back to a full scan if it is ever stale, so correctness never depends on it.
+    private val kingSquares = arrayOfNulls<Square>(2)
+
     private val stateHistory = ArrayDeque<BoardState>()
 
     var activeColour: Colour = Colour.WHITE
@@ -26,6 +31,11 @@ class Board {
 
     fun setPiece(square: Square, piece: Piece?) {
         grid[square.row][square.col] = piece
+        // makeMove always writes the king's destination before clearing its origin, so tracking
+        // placements here keeps the cache correct through normal moves, castling and FEN setup.
+        if (piece != null && piece.type == PieceType.KING) {
+            kingSquares[piece.colour.ordinal] = square
+        }
     }
 
     fun setupStandardPosition() {
@@ -177,11 +187,21 @@ class Board {
     }
 
     fun findKing(colour: Colour): Square {
+        val cached = kingSquares[colour.ordinal]
+        if (cached != null) {
+            val piece = grid[cached.row][cached.col]
+            if (piece != null && piece.type == PieceType.KING && piece.colour == colour) {
+                return cached
+            }
+        }
+
+        // Cache miss or stale (e.g. after a raw grid copy): scan, repair the cache, and return.
         for (row in 0..7) {
             for (col in 0..7) {
-                val square = Square(col, row)
-                val piece = getPiece(square)
+                val piece = grid[row][col]
                 if (piece != null && piece.type == PieceType.KING && piece.colour == colour) {
+                    val square = Square(col, row)
+                    kingSquares[colour.ordinal] = square
                     return square
                 }
             }
