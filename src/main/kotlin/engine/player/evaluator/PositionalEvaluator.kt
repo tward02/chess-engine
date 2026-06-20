@@ -19,7 +19,7 @@ import kotlin.math.abs
  * bot its own instance. Drop-in [Evaluator]; usable by bots directly, or wrapped in
  * [QuiescenceEvaluator] for a stable bar reading.
  */
-class PositionalEvaluator(aggression: Int = 10) : AdaptiveEvaluator(aggression = aggression) {
+open class PositionalEvaluator(aggression: Int = 10) : AdaptiveEvaluator(aggression = aggression) {
 
     override fun evaluate(game: ChessGame, depth: Int): Int {
         val taperedBase = super.evaluate(game, depth)
@@ -32,7 +32,7 @@ class PositionalEvaluator(aggression: Int = 10) : AdaptiveEvaluator(aggression =
         return taperedBase + (white - black)
     }
 
-    private fun positionalScore(board: Board, colour: Colour, phase: Int): Int {
+    protected fun positionalScore(board: Board, colour: Colour, phase: Int): Int {
         val piecesWithSquares = board.getPiecesWithSquares()
         val own = piecesWithSquares.filter { (_, piece) -> piece.colour == colour }
         val ownPawns = own.filter { (_, piece) -> piece.type == PieceType.PAWN }.map { it.first }
@@ -63,10 +63,7 @@ class PositionalEvaluator(aggression: Int = 10) : AdaptiveEvaluator(aggression =
                 score += taper(PASSED_MG[advance], PASSED_EG[advance], phase)
             }
 
-            // Space fades to nothing in the endgame, hence taper(SPACE_BONUS, 0, phase)
-            if (inEnemyHalf(square, colour)) {
-                score += taper(SPACE_BONUS, 0, phase)
-            }
+            score += spaceScore(square, colour, phase)
         }
 
         if (own.count { (_, piece) -> piece.type == PieceType.BISHOP } >= 2) {
@@ -83,6 +80,15 @@ class PositionalEvaluator(aggression: Int = 10) : AdaptiveEvaluator(aggression =
         score += taper(kingShield(board, colour) * KING_SHIELD_PER_PAWN, 0, phase)
 
         return score
+    }
+
+    /**
+     * Middlegame bonus for a pawn sitting in the enemy half; fades to nothing in the endgame.
+     * Factored into its own hook so subclasses (e.g. [CompactEvaluator]) can drop the space term
+     * while still reusing the rest of [positionalScore].
+     */
+    protected open fun spaceScore(square: Square, colour: Colour, phase: Int): Int {
+        return if (inEnemyHalf(square, colour)) taper(SPACE_BONUS, 0, phase) else 0
     }
 
     /** Friendly pawns on the three files in front of the king. A cheap pawn-cover proxy. */

@@ -1,7 +1,6 @@
 package com.tward.app
 
-import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
-import com.tward.engine.player.evaluator.PositionalEvaluator
+import com.tward.engine.player.bot.AdvancedNegamaxBot
 import com.tward.logging.LogConfig
 import com.tward.uci.UciEngine
 
@@ -27,7 +26,7 @@ fun main() {
             println(line)
             System.out.flush()
         },
-        botFactory = { colour -> MiniMaxIterativeDeepeningBot(colour = colour, evaluator = PositionalEvaluator()) }
+        botFactory = { colour -> AdvancedNegamaxBot(colour = colour) }
     )
 
     generateSequence(::readLine).forEach { line ->

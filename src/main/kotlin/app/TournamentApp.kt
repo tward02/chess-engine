@@ -6,11 +6,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.tward.engine.player.bot.MiniMaxBot
-import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
-import com.tward.engine.player.evaluator.AdaptiveEvaluator
-import com.tward.engine.player.evaluator.PositionalEvaluator
-import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
+import com.tward.engine.player.bot.AdvancedNegamaxBot
+import com.tward.engine.player.bot.NegamaxBot
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
@@ -36,24 +33,19 @@ fun main() = application {
     )
 
     // Each spec builds a fresh bot per game; the opening book gives varied openings across games
-    val specA = BotSpec("Position Evaluator") { colour ->
-        MiniMaxIterativeDeepeningBot(
-            colour = colour,
-            evaluator = PositionalEvaluator(),
-            moveOrderer = KillerHistoryMoveOrderer()
+    val specA = BotSpec("Advanced Negamax") { colour ->
+        AdvancedNegamaxBot(
+            colour = colour
         )
     }
 
-    val specB = BotSpec("MiniMaxDepth 4") { colour ->
-        MiniMaxBot(
-            depth = 4,
+    val specB = BotSpec("Negamax") { colour ->
+        NegamaxBot(
             colour = colour,
-            evaluator = AdaptiveEvaluator(),
-            moveOrderer = KillerHistoryMoveOrderer()
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
+    val tournament = Tournament(specA, specB, totalGames = 24, initialTimeMillis = 180_000)
 
     Window(
         onCloseRequest = ::exitApplication,
