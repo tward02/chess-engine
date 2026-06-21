@@ -1,9 +1,14 @@
-// Aggregator root. The build is split into two modules:
-//   :engine  — pure Kotlin/JVM chess core (board, game, bots, evaluators, UCI codec). No UI deps,
-//              so a server can depend on it without dragging in Compose.
+// Aggregator root. The build is split into modules:
+//   :engine  — pure Kotlin/JVM chess core (board, game, bots, evaluators, UCI codec). No UI deps.
+//   :shared  — kotlinx.serialization wire DTOs shared by server and clients.
+//   :server  — Ktor multiplayer / bot-game server, depends on :engine + :shared.
 //   :desktop — Compose Desktop app + UI, depends on :engine. Builds the UCI jar.
-// Shared coordinates for both modules:
-subprojects {
-    group = 'com.tward'
-    version = '1.0-SNAPSHOT'
+// Plugins are declared here (apply false) so each is loaded once and applied per-module by id.
+plugins {
+    id 'org.jetbrains.kotlin.jvm' apply false
+    id 'org.jetbrains.kotlin.plugin.compose' apply false
+    id 'org.jetbrains.kotlin.plugin.serialization' apply false
+    id 'org.jetbrains.compose' apply false
 }
+
+// group and version are declared per-module so each jar is named {module}-{version}.jar.

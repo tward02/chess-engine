@@ -1,0 +1,24 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-library'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+group = 'com.tward'
+version = '1.0.0'
+
+dependencies {
+    // Exposed as api so :server (and future clients) get the serialization runtime transitively.
+    api 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+test {
+    useJUnitPlatform()
+}

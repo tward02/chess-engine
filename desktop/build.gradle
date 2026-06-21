@@ -6,6 +6,9 @@ plugins {
     id 'org.jetbrains.compose'
 }
 
+group = 'com.tward'
+version = '1.0.0'
+
 dependencies {
     implementation project(':engine')
     implementation compose.desktop.currentOs

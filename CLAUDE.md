@@ -4,9 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project layout (Gradle multi-module)
 
-Two modules under one build:
-- **`:engine`** — pure Kotlin/JVM core (`engine`, `uci`, `logging` packages + the `moveBook` resource). No Compose/UI deps, so a server can depend on it directly. Owns the long-running tests.
+Four modules under one build:
+- **`:engine`** — pure Kotlin/JVM core (`engine`, `uci`, `logging` packages + the `moveBook` resource). No Compose/UI deps, so the server depends on it directly. Owns the long-running tests.
+- **`:shared`** — kotlinx.serialization wire DTOs (`com.tward.shared.Protocol`): `GameStateDto`, `CreateGameRequest`, `MoveRequest`, and the polymorphic `ClientMessage`/`ServerMessage` WebSocket envelopes. Engine-free (FEN strings + UCI move strings) so it stays portable to non-JVM clients.
+- **`:server`** — Ktor (Netty) server, depends on `:engine` + `:shared`. `GameRegistry` holds in-memory `GameSession`s; `EngineService` (in-process impl) supplies bots by `BotDifficulty`. REST (`POST /api/games`, `GET /api/games/{id}`, `POST /api/games/{id}/moves`) + a `/ws/games/{id}` WebSocket stream. Server-authoritative: validates moves via the engine, runs the clock, decides results. Run with `:server:run` (port 8080).
 - **`:desktop`** — Compose Desktop app + UI (`ui`, `app` packages + `pieces`/`sounds` resources). `implementation project(':engine')`. Builds the UCI jar.
+
+Plugin versions live in `settings.gradle` (`pluginManagement`); the root `build.gradle` declares them `apply false` so each loads once.
 
 ## Commands
 
