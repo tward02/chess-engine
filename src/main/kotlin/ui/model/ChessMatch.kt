@@ -45,6 +45,11 @@ class ChessMatch(
     var animatingMove by mutableStateOf<Move?>(null)
         private set
 
+    // The most recent move played, kept after its animation ends so the board can highlight the
+    // from/to squares. Null until the first move of the game.
+    var lastMove by mutableStateOf<Move?>(null)
+        private set
+
     // Kept visible until the moving piece arrives; square differs from destination for en passant
     var animatingCapture by mutableStateOf<AnimatingCapture?>(null)
         private set
@@ -148,6 +153,7 @@ class ChessMatch(
 
         clockManager.onMovePlayed()
 
+        lastMove = move
         moveVersion++
 
         clearSelection()

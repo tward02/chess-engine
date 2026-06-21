@@ -6,16 +6,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.tward.engine.player.bot.AdvancedNegamaxBot
 import com.tward.engine.player.bot.MiniMaxBot
 import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
-import com.tward.engine.player.evaluator.AdaptiveEvaluator
-import com.tward.engine.player.evaluator.PositionalEvaluator
-import com.tward.engine.player.evaluator.StandardEvaluator
+import com.tward.engine.player.bot.NegamaxBot
+import com.tward.engine.player.evaluator.*
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
-import com.tward.engine.player.ordering.MvvLvaMoveOrderer
 import com.tward.engine.tournament.BotSpec
-import com.tward.engine.tournament.format.KnockoutFormat
 import com.tward.engine.tournament.MultiBotTournament
+import com.tward.engine.tournament.format.SwissFormat
 import com.tward.logging.Log
 import com.tward.logging.LogConfig
 import com.tward.ui.view.tournament.MultiBotTournamentView
@@ -44,6 +43,78 @@ fun main() = application {
 
     // Each spec builds a fresh bot per game; the opening book gives varied openings across games
     val contenders = listOf(
+        BotSpec("Positional ADNM KHO") { colour ->
+            AdvancedNegamaxBot(
+                colour = colour,
+                evaluator = PositionalEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Adaptive ADMN KHO") { colour ->
+            AdvancedNegamaxBot(
+                colour = colour,
+                evaluator = AdaptiveEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Standard ADNM KHO") { colour ->
+            AdvancedNegamaxBot(
+                colour = colour,
+                evaluator = StandardEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Advanced ADMN KHO") { colour ->
+            AdvancedNegamaxBot(
+                colour = colour,
+                evaluator = AdaptiveEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Compact ADMN KHO") { colour ->
+            AdvancedNegamaxBot(
+                colour = colour,
+                evaluator = CompactEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+
+        BotSpec("Positional Negamax KHO") { colour ->
+            NegamaxBot(
+                colour = colour,
+                evaluator = PositionalEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Adaptive Negamax KHO") { colour ->
+            NegamaxBot(
+                colour = colour,
+                evaluator = AdaptiveEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Standard Negamax KHO") { colour ->
+            NegamaxBot(
+                colour = colour,
+                evaluator = StandardEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Advanced Negamax KHO") { colour ->
+            NegamaxBot(
+                colour = colour,
+                evaluator = AdaptiveEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+        BotSpec("Compact Negamax KHO") { colour ->
+            NegamaxBot(
+                colour = colour,
+                evaluator = CompactEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
+            )
+        },
+
         BotSpec("Positional ID KHO") { colour ->
             MiniMaxIterativeDeepeningBot(
                 colour = colour,
@@ -65,25 +136,18 @@ fun main() = application {
                 moveOrderer = KillerHistoryMoveOrderer()
             )
         },
-        BotSpec("Positional ID MVVL") { colour ->
-            MiniMaxIterativeDeepeningBot(
-                colour = colour,
-                evaluator = PositionalEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
-            )
-        },
-        BotSpec("Adaptive ID MVVL") { colour ->
+        BotSpec("Advanced ID KHO") { colour ->
             MiniMaxIterativeDeepeningBot(
                 colour = colour,
                 evaluator = AdaptiveEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
+                moveOrderer = KillerHistoryMoveOrderer()
             )
         },
-        BotSpec("Standard ID MVVL") { colour ->
+        BotSpec("Compact ID KHO") { colour ->
             MiniMaxIterativeDeepeningBot(
                 colour = colour,
-                evaluator = StandardEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
+                evaluator = CompactEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
             )
         },
 
@@ -111,37 +175,31 @@ fun main() = application {
                 moveOrderer = KillerHistoryMoveOrderer()
             )
         },
-        BotSpec("Positional MM MVVL") { colour ->
+        BotSpec("Compact MM KHO") { colour ->
             MiniMaxBot(
                 depth = 4,
                 colour = colour,
-                evaluator = PositionalEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
+                evaluator = CompactEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
             )
         },
-        BotSpec("Adaptive MM MVVL") { colour ->
+        BotSpec("Advanced MM KHO") { colour ->
             MiniMaxBot(
                 depth = 4,
                 colour = colour,
-                evaluator = AdaptiveEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
+                evaluator = AdvancedEvaluator(),
+                moveOrderer = KillerHistoryMoveOrderer()
             )
         },
-        BotSpec("Standard MM MVVL") { colour ->
-            MiniMaxBot(
-                depth = 4,
-                colour = colour,
-                evaluator = StandardEvaluator(),
-                moveOrderer = MvvLvaMoveOrderer()
-            )
-        }
+
+
 
     )
 
     // Swap in KnockoutFormat() or SwissFormat(rounds = 5) to try other formats
     val tournament = MultiBotTournament(
         contenders = contenders,
-        format = KnockoutFormat(),
+        format = SwissFormat(20),
         initialTimeMillis = 180_000,
         reserveOneForDisplay = true
     )

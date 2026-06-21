@@ -110,6 +110,18 @@ class ChessMatchTest {
     }
 
     @Test
+    fun `last move is null before any move and tracks the from and to squares after`() {
+
+        val match = createMatch()
+        assertNull(match.lastMove)
+
+        match.makeMove(match.game.findMove("e2", "e4")!!)
+
+        assertEquals(Square(4, 6), match.lastMove?.from)
+        assertEquals(Square(4, 4), match.lastMove?.to)
+    }
+
+    @Test
     fun `move updates board position`() {
 
         val match = createMatch()

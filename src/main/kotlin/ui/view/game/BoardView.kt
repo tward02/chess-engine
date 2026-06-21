@@ -269,6 +269,10 @@ fun BoardView(
                                 val isLegalTarget = showLegalMoves &&
                                         square in match.uiState.legalTargets
 
+                                val lastMove = match.lastMove
+                                val isLastMove = lastMove != null &&
+                                        (square == lastMove.from || square == lastMove.to)
+
                                 val type = square.getSquareType()
 
                                 Box(
@@ -277,6 +281,12 @@ fun BoardView(
                                         .background(
                                             when {
                                                 isSelected -> Color.Yellow
+                                                isLastMove && type == SquareType.LIGHT ->
+                                                    Color(0xFFCDD26A)
+
+                                                isLastMove ->
+                                                    Color(0xFFAAA23A)
+
                                                 type == SquareType.LIGHT ->
                                                     Color(0xFFF0D9B5)
 
