@@ -11,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Runs a multi-contender tournament for any [com.tward.engine.tournament.format.TournamentFormat]. Games of a round are played
@@ -152,7 +153,7 @@ class MultiBotTournament(
     private suspend fun awaitRoundComplete() {
         // Workers have drained their share; wait for any reserved display game the UI is still driving.
         while (roundRecorded.get() < roundGameTotal) {
-            delay(20)
+            delay(20.milliseconds)
         }
     }
 

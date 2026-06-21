@@ -1,0 +1,45 @@
+import org.gradle.api.tasks.testing.Test
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+dependencies {
+    // The tournament runners are coroutine-based; previously inherited transitively via Compose.
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+test {
+    useJUnitPlatform {
+        excludeTags 'long'
+    }
+}
+
+tasks.register('longTest', Test) {
+    description = 'Runs all tests including long tests'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    useJUnitPlatform()
+}
+
+tasks.withType(Test).configureEach {
+
+    testLogging {
+        events "passed", "failed", "skipped"
+        showStandardStreams = true
+    }
+
+    afterTest { descriptor, result ->
+        println "${descriptor.name} took ${result.endTime - result.startTime} ms"
+    }
+}

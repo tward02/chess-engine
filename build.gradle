@@ -1,82 +1,9 @@
-import org.gradle.api.tasks.testing.Test
-
-plugins {
-    id 'org.jetbrains.kotlin.jvm' version '2.3.21'
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.21'
-    id 'org.jetbrains.compose' version '1.9.0'
-}
-
-group = 'com.tward'
-version = '1.0-SNAPSHOT'
-
-repositories {
-    google()
-    mavenCentral()
-    maven { url 'https://maven.pkg.jetbrains.space/public/p/compose/dev' }
-}
-
-dependencies {
-    implementation compose.desktop.currentOs
-
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
-    testImplementation compose.desktop.uiTestJUnit4
-}
-
-kotlin {
-    jvmToolchain(21)
-}
-
-test {
-    useJUnitPlatform {
-        excludeTags 'long'
-    }
-}
-
-tasks.register('longTest', Test) {
-    description = 'Runs all tests including long tests'
-    group = 'verification'
-
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
-
-    useJUnitPlatform()
-}
-
-tasks.withType(Test).configureEach {
-
-    testLogging {
-        events "passed", "failed", "skipped"
-        showStandardStreams = true
-    }
-
-    afterTest { descriptor, result ->
-        println "${descriptor.name} took ${result.endTime - result.startTime} ms"
-    }
-}
-
-compose.desktop {
-    application {
-        // Default run target. Switch to 'com.tward.app.TournamentAppKt' to run the tournament.
-        mainClass = 'com.tward.app.GameAppKt'
-    }
-}
-
-// Builds a standalone runnable jar for the UCI bridge (com.tward.app.UciAppKt).
-// The UCI path needs no Compose, so `java -jar build/libs/uci-engine.jar` speaks UCI
-// over stdin/stdout — the command lichess-bot (and UCI GUIs) invoke. See UCI_LICHESS.md.
-tasks.register('uciJar', Jar) {
-    archiveBaseName = 'uci-engine'
-    archiveVersion = ''
-    manifest {
-        attributes 'Main-Class': 'com.tward.app.UciAppKt'
-    }
-    from sourceSets.main.output
-    dependsOn configurations.runtimeClasspath
-    from {
-        configurations.runtimeClasspath.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
-    }
-    // Drop signature files from bundled deps so the merged jar stays loadable.
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+// Aggregator root. The build is split into two modules:
+//   :engine  — pure Kotlin/JVM chess core (board, game, bots, evaluators, UCI codec). No UI deps,
+//              so a server can depend on it without dragging in Compose.
+//   :desktop — Compose Desktop app + UI, depends on :engine. Builds the UCI jar.
+// Shared coordinates for both modules:
+subprojects {
+    group = 'com.tward'
+    version = '1.0-SNAPSHOT'
 }

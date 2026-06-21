@@ -1,0 +1,63 @@
+import org.gradle.api.tasks.testing.Test
+
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.compose'
+}
+
+dependencies {
+    implementation project(':engine')
+    implementation compose.desktop.currentOs
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testImplementation compose.desktop.uiTestJUnit4
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.withType(Test).configureEach {
+
+    testLogging {
+        events "passed", "failed", "skipped"
+        showStandardStreams = true
+    }
+
+    afterTest { descriptor, result ->
+        println "${descriptor.name} took ${result.endTime - result.startTime} ms"
+    }
+}
+
+compose.desktop {
+    application {
+        // Default run target. Switch to 'com.tward.app.TournamentAppKt' or
+        // 'com.tward.app.MultiBotTournamentAppKt' to run the tournament UIs.
+        mainClass = 'com.tward.app.GameAppKt'
+    }
+}
+
+// Builds a standalone runnable jar for the UCI bridge (com.tward.app.UciAppKt).
+// `java -jar desktop/build/libs/uci-engine.jar` speaks UCI over stdin/stdout — the command
+// lichess-bot (and UCI GUIs) invoke. See UCI_LICHESS.md.
+tasks.register('uciJar', Jar) {
+    archiveBaseName = 'uci-engine'
+    archiveVersion = ''
+    manifest {
+        attributes 'Main-Class': 'com.tward.app.UciAppKt'
+    }
+    from sourceSets.main.output
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
+    }
+    // Drop signature files from bundled deps so the merged jar stays loadable.
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
