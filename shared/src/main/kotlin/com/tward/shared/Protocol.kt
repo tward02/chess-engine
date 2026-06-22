@@ -10,18 +10,23 @@ import kotlinx.serialization.Serializable
  * `:engine` model with `Board.fromFEN` / `UciMoveCodec`.
  */
 
-enum class PlayerKind { HUMAN, BOT }
-
-/** Bot strength tier; the server maps each to a concrete bot + search budget. */
-enum class BotDifficulty { EASY, MEDIUM, HARD }
-
 enum class GameStatus { IN_PROGRESS, WHITE_WON, BLACK_WON, DRAW }
 
+/** A selectable opponent bot, as shown in the lobby. Full setup lives server-side (later: in a DB). */
+@Serializable
+data class BotInfo(
+    val id: String,
+    val name: String,
+    val approxElo: Int,
+    val description: String,
+    val style: String              // a grouping tag, e.g. "Aggressive", "Positional", "Beginner"
+)
+
+/** Create a game against a catalog bot. Human-vs-human games are created via the lobby instead. */
 @Serializable
 data class CreateGameRequest(
-    val opponent: PlayerKind = PlayerKind.BOT,
-    val difficulty: BotDifficulty = BotDifficulty.HARD,
-    val playerColour: String = "white",       // colour the requesting human takes ("white"/"black")
+    val botId: String,
+    val playerColour: String = "white",        // colour the requesting human takes ("white"/"black")
     val initialTimeMillis: Long = 300_000,
     val incrementMillis: Long = 0
 )
@@ -47,30 +52,77 @@ data class GameStateDto(
     val legalMoves: List<String> = emptyList() // UCI strings for the side to move
 )
 
-/** Client -> server messages over the WebSocket. */
+// ---- In-game WebSocket (/ws/games/{id}) ----
+
+/** Client -> server messages over the game WebSocket. */
 @Serializable
 sealed interface ClientMessage {
-    @Serializable
-    @SerialName("move")
-    data class MakeMove(val uci: String) : ClientMessage
-
-    @Serializable
-    @SerialName("resign")
-    data object Resign : ClientMessage
+    @Serializable @SerialName("move") data class MakeMove(val uci: String) : ClientMessage
+    @Serializable @SerialName("resign") data object Resign : ClientMessage
 }
 
-/** Server -> client messages over the WebSocket. */
+/** Server -> client messages over the game WebSocket. */
 @Serializable
 sealed interface ServerMessage {
-    @Serializable
-    @SerialName("state")
-    data class State(val game: GameStateDto) : ServerMessage
+    @Serializable @SerialName("state") data class State(val game: GameStateDto) : ServerMessage
+    @Serializable @SerialName("gameOver") data class GameOver(val status: GameStatus, val reason: String) : ServerMessage
+    @Serializable @SerialName("error") data class Error(val message: String) : ServerMessage
+}
 
-    @Serializable
-    @SerialName("gameOver")
-    data class GameOver(val status: GameStatus, val reason: String) : ServerMessage
+// ---- Lobby WebSocket (/ws/lobby) ----
 
-    @Serializable
-    @SerialName("error")
-    data class Error(val message: String) : ServerMessage
+enum class PlayerStatus { AVAILABLE, IN_GAME }
+
+@Serializable
+data class PlayerInfo(val id: String, val name: String, val status: PlayerStatus)
+
+@Serializable
+data class ChallengeInfo(
+    val id: String,
+    val fromId: String,
+    val fromName: String,
+    val toId: String,
+    val challengerColour: String,              // colour the challenger will play
+    val initialTimeMillis: Long,
+    val incrementMillis: Long
+)
+
+/** Client -> server messages over the lobby WebSocket. */
+@Serializable
+sealed interface LobbyClientMessage {
+    @Serializable @SerialName("join") data class Join(val name: String) : LobbyClientMessage
+
+    @Serializable @SerialName("challengePlayer")
+    data class ChallengePlayer(
+        val opponentId: String,
+        val colour: String = "white",
+        val initialTimeMillis: Long = 300_000,
+        val incrementMillis: Long = 0
+    ) : LobbyClientMessage
+
+    @Serializable @SerialName("challengeBot")
+    data class ChallengeBot(
+        val botId: String,
+        val colour: String = "white",
+        val initialTimeMillis: Long = 300_000,
+        val incrementMillis: Long = 0
+    ) : LobbyClientMessage
+
+    @Serializable @SerialName("accept") data class AcceptChallenge(val challengeId: String) : LobbyClientMessage
+    @Serializable @SerialName("decline") data class DeclineChallenge(val challengeId: String) : LobbyClientMessage
+}
+
+/** Server -> client messages over the lobby WebSocket. */
+@Serializable
+sealed interface LobbyServerMessage {
+    @Serializable @SerialName("welcome") data class Welcome(val playerId: String) : LobbyServerMessage
+    @Serializable @SerialName("players") data class Players(val players: List<PlayerInfo>) : LobbyServerMessage
+    @Serializable @SerialName("bots") data class Bots(val bots: List<BotInfo>) : LobbyServerMessage
+    @Serializable @SerialName("incomingChallenge") data class IncomingChallenge(val challenge: ChallengeInfo) : LobbyServerMessage
+    @Serializable @SerialName("challengeDeclined") data class ChallengeDeclined(val challengeId: String) : LobbyServerMessage
+
+    /** Sent to each participant when their game starts; [yourColour] is "white"/"black". */
+    @Serializable @SerialName("gameStarted") data class GameStarted(val gameId: String, val yourColour: String) : LobbyServerMessage
+
+    @Serializable @SerialName("lobbyError") data class LobbyError(val message: String) : LobbyServerMessage
 }

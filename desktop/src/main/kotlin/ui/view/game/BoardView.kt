@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Card
@@ -29,6 +28,8 @@ import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.evaluator.PositionalEvaluator
 import com.tward.engine.player.evaluator.QuiescenceEvaluator
+import com.tward.ui.board.ChessBoardView
+import com.tward.ui.board.PieceImage
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.playDoneSound
 import com.tward.ui.playMoveSound
@@ -254,109 +255,35 @@ fun BoardView(
                 }
             ) {
 
-                Column {
-                    for (row in 0..7) {
-
-                        Row {
-
-                            for (col in 0..7) {
-
-                                val square = Square(col, row)
-                                val piece = match.game.board.getPiece(square)
-                                val isSelected =
-                                    match.uiState.selectedSquare == square
-
-                                val isLegalTarget = showLegalMoves &&
-                                        square in match.uiState.legalTargets
-
-                                val lastMove = match.lastMove
-                                val isLastMove = lastMove != null &&
-                                        (square == lastMove.from || square == lastMove.to)
-
-                                val type = square.getSquareType()
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(SQUARE_SIZE.dp)
-                                        .background(
-                                            when {
-                                                isSelected -> Color.Yellow
-                                                isLastMove && type == SquareType.LIGHT ->
-                                                    Color(0xFFCDD26A)
-
-                                                isLastMove ->
-                                                    Color(0xFFAAA23A)
-
-                                                type == SquareType.LIGHT ->
-                                                    Color(0xFFF0D9B5)
-
-                                                else ->
-                                                    Color(0xFFB58863)
-                                            }
-                                        ).clickable(
-                                            enabled = match.uiState.gameResult == null && !match.isAnimating
-                                        ) {
-                                            val selected =
-                                                match.uiState.selectedSquare
-
-                                            if (selected == null) {
-
-                                                val clickedPiece =
-                                                    match.game.board.getPiece(square)
-
-                                                if (
-                                                    clickedPiece != null &&
-                                                    clickedPiece.colour ==
-                                                    match.game.board.activeColour
-                                                ) {
-                                                    match.select(square)
-                                                }
-
-                                            } else {
-
-                                                val moves =
-                                                    match.game
-                                                        .getLegalMoves()
-                                                        .filter {
-                                                            it.from == selected &&
-                                                                    it.to == square
-                                                        }
-
-
-                                                if (moves.size == 1) {
-                                                    commitMove(moves[0], true)
-                                                } else {
-                                                    if (moves.isNotEmpty()) {
-                                                        promotionAnimates = true
-                                                        optionalMoves = moves.filter { it.promotionType != null }
-                                                    } else {
-                                                        match.clearSelection()
-                                                    }
-                                                }
-                                            }
-
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isLegalTarget) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size((SQUARE_SIZE * 0.5f).dp)
-                                                .background(
-                                                    Color.Gray.copy(alpha = 0.5f),
-                                                    shape = CircleShape
-                                                )
-                                        )
-                                    }
-
-                                    if (square !in hiddenSquares) {
-                                        PieceView(piece)
-                                    }
+                ChessBoardView(
+                    pieceAt = { match.game.board.getPiece(it) },
+                    squareSize = SQUARE_SIZE,
+                    selected = match.uiState.selectedSquare,
+                    lastMoveFrom = match.lastMove?.from,
+                    lastMoveTo = match.lastMove?.to,
+                    legalTargets = if (showLegalMoves) match.uiState.legalTargets else emptySet(),
+                    hiddenSquares = hiddenSquares,
+                    clickEnabled = match.uiState.gameResult == null && !match.isAnimating,
+                    onSquareClick = { square ->
+                        val selected = match.uiState.selectedSquare
+                        if (selected == null) {
+                            val clickedPiece = match.game.board.getPiece(square)
+                            if (clickedPiece != null && clickedPiece.colour == match.game.board.activeColour) {
+                                match.select(square)
+                            }
+                        } else {
+                            val moves = match.game.getLegalMoves().filter { it.from == selected && it.to == square }
+                            when {
+                                moves.size == 1 -> commitMove(moves[0], true)
+                                moves.isNotEmpty() -> {
+                                    promotionAnimates = true
+                                    optionalMoves = moves.filter { it.promotionType != null }
                                 }
+                                else -> match.clearSelection()
                             }
                         }
                     }
-                }
+                )
 
                 if (animatingMove != null) {
 
@@ -373,7 +300,7 @@ fun BoardView(
                                 .size(SQUARE_SIZE.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            PieceView(capture.piece)
+                            PieceImage(capture.piece)
                         }
                     }
 
@@ -407,7 +334,7 @@ fun BoardView(
                             .size(SQUARE_SIZE.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        PieceView(draggedPiece)
+                        PieceImage(draggedPiece)
                     }
                 }
             }
@@ -510,7 +437,7 @@ fun BoardView(
 
                                     move.promotionType?.let { type ->
 
-                                        PieceView(
+                                        PieceImage(
                                             Piece(
                                                 type,
                                                 move.piece!!.colour
@@ -547,7 +474,7 @@ private fun MovingPiece(
             .size(SQUARE_SIZE.dp),
         contentAlignment = Alignment.Center
     ) {
-        PieceView(piece)
+        PieceImage(piece)
     }
 }
 

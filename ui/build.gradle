@@ -1,0 +1,25 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.compose'
+}
+
+group = 'com.tward'
+version = '1.0.0'
+
+dependencies {
+    implementation project(':engine')              // Square / Piece / Colour appear in the component API
+    implementation compose.desktop.currentOs
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+    testImplementation compose.desktop.uiTestJUnit4
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+test {
+    useJUnitPlatform()
+}

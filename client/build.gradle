@@ -1,0 +1,39 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+group = 'com.tward'
+version = '1.0.0'
+
+def ktorVersion = '3.4.2'
+
+dependencies {
+    implementation project(':engine')   // Board.fromFEN for rendering
+    implementation project(':shared')   // wire DTOs
+    implementation project(':ui')        // shared ChessBoardView + PieceImage
+    implementation compose.desktop.currentOs
+
+    implementation "io.ktor:ktor-client-core:$ktorVersion"
+    implementation "io.ktor:ktor-client-cio:$ktorVersion"
+    implementation "io.ktor:ktor-client-websockets:$ktorVersion"
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+compose.desktop {
+    application {
+        mainClass = 'com.tward.client.MainKt'
+    }
+}

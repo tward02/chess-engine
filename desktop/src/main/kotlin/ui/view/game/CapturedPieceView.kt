@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tward.engine.board.Piece
+import com.tward.ui.board.PieceImage
 
 @Composable
 fun CapturedPieces(pieces: List<Piece>, advantage: Int) {
@@ -24,7 +25,7 @@ fun CapturedPieces(pieces: List<Piece>, advantage: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
 
         orderedPieces.forEach { piece ->
-            PieceView(piece, size = 26)
+            PieceImage(piece, size = 26)
         }
 
         if (advantage > 0) {

@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project layout (Gradle multi-module)
 
-Four modules under one build:
+Six modules under one build:
 - **`:engine`** — pure Kotlin/JVM core (`engine`, `uci`, `logging` packages + the `moveBook` resource). No Compose/UI deps, so the server depends on it directly. Owns the long-running tests.
-- **`:shared`** — kotlinx.serialization wire DTOs (`com.tward.shared.Protocol`): `GameStateDto`, `CreateGameRequest`, `MoveRequest`, and the polymorphic `ClientMessage`/`ServerMessage` WebSocket envelopes. Engine-free (FEN strings + UCI move strings) so it stays portable to non-JVM clients.
-- **`:server`** — Ktor (Netty) server, depends on `:engine` + `:shared`. `GameRegistry` holds in-memory `GameSession`s; `EngineService` (in-process impl) supplies bots by `BotDifficulty`. REST (`POST /api/games`, `GET /api/games/{id}`, `POST /api/games/{id}/moves`) + a `/ws/games/{id}` WebSocket stream. Server-authoritative: validates moves via the engine, runs the clock, decides results. Run with `:server:run` (port 8080).
-- **`:desktop`** — Compose Desktop app + UI (`ui`, `app` packages + `pieces`/`sounds` resources). `implementation project(':engine')`. Builds the UCI jar.
+- **`:shared`** — kotlinx.serialization wire DTOs (`com.tward.shared.Protocol`): `GameStateDto`, `CreateGameRequest`, `MoveRequest`, `BotInfo`, the polymorphic game `ClientMessage`/`ServerMessage`, and the lobby `LobbyClientMessage`/`LobbyServerMessage` envelopes (+ `PlayerInfo`/`ChallengeInfo`). Engine-free (FEN strings + UCI move strings) so it stays portable to non-JVM clients.
+- **`:server`** — Ktor (Netty) server, depends on `:engine` + `:shared`. `BotCatalog`/`BotSpec`/`BotFactory` define many selectable bots (data-driven, DB-ready) built from bot type × evaluator × orderer × budget. `LobbyManager` tracks presence and brokers challenges (player and bot); `GameRegistry`/`GameSession` run games (`Participant` = Human/Bot, identity/colour-aware, Mutex-guarded, `SharedFlow` events). REST (`GET /api/bots`, `POST /api/games`, `GET /api/games/{id}`, `POST /api/games/{id}/moves`) + `/ws/lobby` and `/ws/games/{id}?colour=` WebSockets. Server-authoritative (validates moves, enforces turn, runs clock, decides result). Run with `:server:run` (port 8080).
+- **`:ui`** — shared Compose components (`com.tward.ui.board`): the model-agnostic `ChessBoardView` (squares, pieces, highlights, click callback, orientation) and `PieceImage` (+ the `pieces/` image assets). Depends on `:engine`. Used by both `:desktop` and `:client` so board/piece rendering lives in one place.
+- **`:desktop`** — Compose Desktop app + UI (`ui`, `app` packages + `sounds` resource). `implementation project(':engine', ':ui')`. `BoardView` renders its grid via `:ui`'s `ChessBoardView`, layering drag/animation overlays on top. Builds the UCI jar.
+- **`:client`** — lightweight Compose desktop test client for the server (`com.tward.client`): lobby + click-to-move board (the shared `ChessBoardView`) over the ktor WebSocket client. Depends on `:engine` + `:shared` + `:ui`. Run with `:client:run`.
 
 Plugin versions live in `settings.gradle` (`pluginManagement`); the root `build.gradle` declares them `apply false` so each loads once.
 
@@ -91,7 +93,7 @@ Kotlin targeting JVM 21, split into a Compose-free `:engine` library and a `:des
 
 ### UI (`com.tward.ui`)
 
-Compose Desktop views. `BoardView` accepts `showResultDialog` and `onGameOver` params used by the tournament display, and highlights the **last move's from/to squares** (from `ChessMatch.lastMove`). Its optional eval bar runs `QuiescenceEvaluator(PositionalEvaluator())` once per move on a background dispatcher (speed is irrelevant there, so it uses a rich evaluator, not the search default). `TournamentView` shows one live game (via `BoardView`) while headless workers run; both claim from the same game pool so counts are never double-counted. `MultiBotTournamentView` shows one randomly chosen live game of the current round (the engine's reserved game) alongside a live standings table polled from `MultiBotTournament.standings()`. `ChessMatch` is the UI-layer game model; `ClockManager` drives the chess clock.
+Compose Desktop views. The board grid + piece rendering live in the shared **`:ui`** module (`ChessBoardView`/`PieceImage`); `BoardView` here renders through `ChessBoardView` and adds the desktop-only drag, animation and promotion overlays. `BoardView` accepts `showResultDialog` and `onGameOver` params used by the tournament display, and highlights the **last move's from/to squares** (from `ChessMatch.lastMove`). Its optional eval bar runs `QuiescenceEvaluator(PositionalEvaluator())` once per move on a background dispatcher (speed is irrelevant there, so it uses a rich evaluator, not the search default). `TournamentView` shows one live game (via `BoardView`) while headless workers run; both claim from the same game pool so counts are never double-counted. `MultiBotTournamentView` shows one randomly chosen live game of the current round (the engine's reserved game) alongside a live standings table polled from `MultiBotTournament.standings()`. `ChessMatch` is the UI-layer game model; `ClockManager` drives the chess clock.
 
 ### Logging (`com.tward.logging`)
 
