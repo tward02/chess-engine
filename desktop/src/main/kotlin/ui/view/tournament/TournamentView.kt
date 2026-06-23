@@ -250,7 +250,7 @@ private fun buildDisplayMatch(tournament: Tournament, index: Int): ChessMatch {
     val (whiteSpec, blackSpec) = tournament.colourAssignment(index)
 
     val displayTime = if (tournament.initialTimeMillis > 0) tournament.initialTimeMillis.toLong()
-                      else DISPLAY_TIME_MILLIS
+    else DISPLAY_TIME_MILLIS
 
     return ChessMatch(
         ChessGame(Board.getStartingBoard()),

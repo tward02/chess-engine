@@ -1,24 +1,21 @@
 package com.tward.server
 
-import com.tward.shared.ChallengeInfo
-import com.tward.shared.LobbyClientMessage
-import com.tward.shared.LobbyServerMessage
-import com.tward.shared.PlayerInfo
-import com.tward.shared.PlayerStatus
-import com.tward.shared.ServerMessage
+import com.tward.shared.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /** One connected lobby participant and its outbound message queue (drained by its WebSocket). */
 class LobbyPlayer(val id: String) {
-    @Volatile var name: String = ""
-    @Volatile var status: PlayerStatus = PlayerStatus.AVAILABLE
+    @Volatile
+    var name: String = ""
+    @Volatile
+    var status: PlayerStatus = PlayerStatus.AVAILABLE
     val outbox = Channel<LobbyServerMessage>(Channel.BUFFERED)
     val joined: Boolean get() = name.isNotEmpty()
 }

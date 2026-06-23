@@ -3,17 +3,10 @@ package com.tward.engine.board
 data class Piece(var type: PieceType, var colour: Colour) {
 
     fun toFENChar(): Char {
-        var char = when (type) {
-            PieceType.PAWN -> 'P'
-            PieceType.ROOK -> 'R'
-            PieceType.KNIGHT -> 'N'
-            PieceType.BISHOP -> 'B'
-            PieceType.QUEEN -> 'Q'
-            PieceType.KING -> 'K'
-        }
+        var char = pieceChar()
 
-        if (colour == Colour.BLACK) {
-            char = char.lowercaseChar()
+        if (colour == Colour.WHITE) {
+            char = char.uppercaseChar()
         }
 
         return char
@@ -47,21 +40,15 @@ data class Piece(var type: PieceType, var colour: Colour) {
             if (colour == Colour.WHITE) "w"
             else "b"
 
-        val piece =
-            when (type) {
-                PieceType.PAWN -> "p"
-                PieceType.KNIGHT -> "n"
-                PieceType.BISHOP -> "b"
-                PieceType.ROOK -> "r"
-                PieceType.QUEEN -> "q"
-                PieceType.KING -> "k"
-            }
-
-        return "$colour$piece.svg.webp"
+        return "$colour${this.pieceChar()}.svg.webp"
     }
 
     fun value(): Int {
         return type.value()
+    }
+
+    fun pieceChar(): Char {
+        return type.char()
     }
 }
 
@@ -83,6 +70,17 @@ fun PieceType.value(): Int {
         PieceType.ROOK -> 5
         PieceType.QUEEN -> 9
         PieceType.KING -> 0
+    }
+}
+
+fun PieceType.char(): Char {
+    return when (this) {
+        PieceType.PAWN -> 'p'
+        PieceType.KNIGHT -> 'n'
+        PieceType.BISHOP -> 'b'
+        PieceType.ROOK -> 'r'
+        PieceType.QUEEN -> 'q'
+        PieceType.KING -> 'k'
     }
 }
 

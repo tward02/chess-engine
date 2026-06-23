@@ -1,6 +1,6 @@
 package ui.view.game
 
-import com.tward.ui.view.game.formatClock
+import com.tward.ui.board.formatClock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

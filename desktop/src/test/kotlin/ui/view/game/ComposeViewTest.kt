@@ -5,9 +5,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import com.tward.engine.board.Colour
+import com.tward.ui.board.CapturedPieces
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
-import com.tward.ui.view.game.CapturedPieces
 import com.tward.ui.view.game.ChessClock
 import kotlin.test.Test
 

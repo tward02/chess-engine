@@ -193,8 +193,7 @@ fun main() = application {
         },
 
 
-
-    )
+        )
 
     // Swap in KnockoutFormat() or SwissFormat(rounds = 5) to try other formats
     val tournament = MultiBotTournament(

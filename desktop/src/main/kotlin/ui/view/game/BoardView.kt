@@ -3,33 +3,32 @@ package com.tward.ui.view.game
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.tward.engine.board.*
+import com.tward.engine.board.Colour
+import com.tward.engine.board.Move
+import com.tward.engine.board.Piece
+import com.tward.engine.board.Square
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.evaluator.PositionalEvaluator
 import com.tward.engine.player.evaluator.QuiescenceEvaluator
+import com.tward.ui.board.CapturedPieces
 import com.tward.ui.board.ChessBoardView
 import com.tward.ui.board.PieceImage
+import com.tward.ui.board.PromotionPopupView
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.playDoneSound
 import com.tward.ui.playMoveSound
@@ -76,7 +75,7 @@ fun BoardView(
 
         LaunchedEffect(version) {
 
-                // Copy on the UI thread before handing off to the background evaluator
+            // Copy on the UI thread before handing off to the background evaluator
             val searchGame = match.game.copy()
 
             evaluation = withContext(Dispatchers.Default) {
@@ -143,12 +142,12 @@ fun BoardView(
 
             // Read the clock just before the bot starts so it can budget its search accurately
             val timeLeft = (
-                if (activeColour == Colour.WHITE) {
-                    match.clockManager.currentWhite()
-                } else {
-                    match.clockManager.currentBlack()
-                }
-                ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                    if (activeColour == Colour.WHITE) {
+                        match.clockManager.currentWhite()
+                    } else {
+                        match.clockManager.currentBlack()
+                    }
+                    ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
             val move =
                 withContext(Dispatchers.Default) {
@@ -279,6 +278,7 @@ fun BoardView(
                                     promotionAnimates = true
                                     optionalMoves = moves.filter { it.promotionType != null }
                                 }
+
                                 else -> match.clearSelection()
                             }
                         }
@@ -370,86 +370,9 @@ fun BoardView(
                 })
         }
 
-        if (optionalMoves.isNotEmpty()) {
-
-            Dialog(onDismissRequest = {}) {
-
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = 12.dp,
-                    backgroundColor = Color(0xFF2B2B2B),
-                    modifier = Modifier.width(420.dp)
-                ) {
-
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-
-                        Text(
-                            text = "Choose Promotion",
-                            color = Color.White
-                        )
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-
-                            val orderedMoves =
-                                optionalMoves.sortedBy {
-                                    when (it.promotionType) {
-                                        PieceType.QUEEN -> 0
-                                        PieceType.ROOK -> 1
-                                        PieceType.BISHOP -> 2
-                                        PieceType.KNIGHT -> 3
-                                        else -> 99
-                                    }
-                                }
-
-                            orderedMoves.forEach { move ->
-                                var hovered by remember { mutableStateOf(false) }
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                            if (hovered)
-                                                Color(0xFF505050)
-                                            else
-                                                Color(0xFF3A3A3A)
-                                        )
-                                        .border(
-                                            2.dp,
-                                            Color(0xFF606060),
-                                            RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable {
-                                            val chosen = move
-                                            optionalMoves = emptyList()
-                                            commitMove(chosen, promotionAnimates)
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-
-                                    move.promotionType?.let { type ->
-
-                                        PieceImage(
-                                            Piece(
-                                                type,
-                                                move.piece!!.colour
-                                            )
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        PromotionPopupView(optionalMoves) {
+            optionalMoves = emptyList()
+            commitMove(it, promotionAnimates)
         }
     }
 }

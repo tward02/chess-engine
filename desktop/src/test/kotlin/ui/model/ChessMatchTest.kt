@@ -10,11 +10,7 @@ import com.tward.engine.player.HumanPlayer
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
 import com.tward.ui.model.TimeControl
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class ChessMatchTest {
 

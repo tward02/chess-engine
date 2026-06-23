@@ -9,6 +9,6 @@ data class Move(
     val isCastling: Boolean = false
 ) {
     fun toAlgebraic(): String {
-        return "$from$to"
+        return "$from$to${promotionType?.char() ?: ""}"
     }
 }

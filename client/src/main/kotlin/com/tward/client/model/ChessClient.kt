@@ -1,10 +1,12 @@
-package com.tward.client
+package com.tward.client.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.tward.engine.board.Square
+import com.tward.engine.board.*
+import com.tward.engine.game.ChessGame
 import com.tward.shared.*
+import com.tward.ui.board.Sounds
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
@@ -37,6 +39,8 @@ class ChessClient(private val scope: CoroutineScope) {
     var myColour by mutableStateOf("white")
     var selected by mutableStateOf<Square?>(null)
 
+    var promotionMoves by mutableStateOf<List<Move>>(emptyList())
+
     private var baseWs = "ws://localhost:8080"
     private var lobby: DefaultClientWebSocketSession? = null
     private var gameSocket: DefaultClientWebSocketSession? = null
@@ -62,12 +66,18 @@ class ChessClient(private val scope: CoroutineScope) {
 
     private fun handleLobby(message: LobbyServerMessage) {
         when (message) {
-            is LobbyServerMessage.Welcome -> { myId = message.playerId; screen = Screen.LOBBY; status = "In lobby" }
+            is LobbyServerMessage.Welcome -> {
+                myId = message.playerId; screen = Screen.LOBBY; status = "In lobby"
+            }
+
             is LobbyServerMessage.Bots -> bots = message.bots
             is LobbyServerMessage.Players -> players = message.players
             is LobbyServerMessage.IncomingChallenge -> challenges = challenges + message.challenge
             is LobbyServerMessage.ChallengeDeclined -> status = "Your challenge was declined"
-            is LobbyServerMessage.GameStarted -> { myColour = message.yourColour; openGame(message.gameId, message.yourColour) }
+            is LobbyServerMessage.GameStarted -> {
+                myColour = message.yourColour; openGame(message.gameId, message.yourColour)
+            }
+
             is LobbyServerMessage.LobbyError -> status = "Error: ${message.message}"
         }
     }
@@ -103,8 +113,16 @@ class ChessClient(private val scope: CoroutineScope) {
                     for (frame in incoming) {
                         if (frame !is Frame.Text) continue
                         when (val message = json.decodeFromString<ServerMessage>(frame.readText())) {
-                            is ServerMessage.State -> game = message.game
-                            is ServerMessage.GameOver -> status = "Game over: ${message.reason}"
+                            is ServerMessage.State -> {
+                                val previous = game
+                                game = message.game
+                                maybePlayMoveSound(previous, message.game)
+                            }
+
+                            is ServerMessage.GameOver -> {
+                                status = message.reason; Sounds.playGameOver()
+                            }
+
                             is ServerMessage.Error -> status = message.message
                         }
                     }
@@ -118,7 +136,12 @@ class ChessClient(private val scope: CoroutineScope) {
     /** Click-to-move: first click selects a source square, the second attempts a move to the target. */
     fun clickSquare(square: Square) {
         val current = game ?: return
-        if (current.sideToMove != myColour) { status = "Not your turn"; return }
+        if (current.sideToMove != myColour) {
+            if (current.status == GameStatus.IN_PROGRESS) {
+                status = "Not your turn"
+            }
+            return
+        }
 
         val from = selected
         if (from == null) {
@@ -130,12 +153,33 @@ class ChessClient(private val scope: CoroutineScope) {
             return
         }
         val uci = resolveMove(current.legalMoves, from.toString(), square.toString())
-        if (uci != null) {
-            scope.launch { gameSocket?.send(Frame.Text(json.encodeToString<ClientMessage>(ClientMessage.MakeMove(uci)))) }
+
+        if (uci.size == 1) {
+            scope.launch { gameSocket?.send(Frame.Text(json.encodeToString<ClientMessage>(ClientMessage.MakeMove(uci[0])))) }
             selected = null
+        } else if (uci.size > 1) { // promotion
+            promotionMoves = uci.map {
+                Move(
+                    from = from,
+                    to = square,
+                    piece = Piece(PieceType.PAWN, if (myColour == "white") Colour.WHITE else Colour.BLACK),
+                    promotionType = when (it.last()) {
+                        'q' -> PieceType.QUEEN
+                        'n' -> PieceType.KNIGHT
+                        'b' -> PieceType.BISHOP
+                        'r' -> PieceType.ROOK
+                        else -> null
+                    }
+                )
+            }
         } else {
             selected = square   // not a legal target; treat as reselect
         }
+    }
+
+    fun makePromotionMove(move: Move) {
+        scope.launch { gameSocket?.send(Frame.Text(json.encodeToString<ClientMessage>(ClientMessage.MakeMove(move.toAlgebraic())))) }
+        promotionMoves = emptyList()
     }
 
     fun resign() {
@@ -149,6 +193,23 @@ class ChessClient(private val scope: CoroutineScope) {
         selected = null
         screen = Screen.LOBBY
     }
+
+    /** Releases the underlying HTTP client. Call when the client is no longer needed. */
+    fun close() = http.close()
+
+    // Plays a move/capture/check sound when a new move appears in a state update.
+    private fun maybePlayMoveSound(previous: GameStateDto?, current: GameStateDto) {
+        val last = current.lastMove ?: return
+        if (previous?.lastMove == last) return
+        val capture = previous?.fen != null && placementCount(previous.fen) > placementCount(current.fen)
+        Sounds.playMove(isCapture = capture, isCheck = sideToMoveInCheck(current.fen))
+    }
+
+    private fun placementCount(fen: String): Int = fen.substringBefore(' ').count { it.isLetter() }
+
+    private fun sideToMoveInCheck(fen: String): Boolean =
+        runCatching { val board = Board.fromFEN(fen); ChessGame(board).isInCheck(board.activeColour) }
+            .getOrDefault(false)
 }
 
 /**
@@ -156,7 +217,6 @@ class ChessClient(private val scope: CoroutineScope) {
  * queen promotion when the same squares offer several promotions. Returns null if no move matches.
  * Pure (no UI/network) so it is unit-tested directly.
  */
-internal fun resolveMove(legalMoves: List<String>, from: String, to: String): String? {
-    val candidates = legalMoves.filter { it.startsWith(from + to) }
-    return candidates.firstOrNull { it.endsWith("q") } ?: candidates.firstOrNull()
+internal fun resolveMove(legalMoves: List<String>, from: String, to: String): List<String> {
+    return legalMoves.filter { it.startsWith(from + to) }
 }

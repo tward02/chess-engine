@@ -4,12 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.tward.engine.board.Colour
-import com.tward.engine.board.Move
-import com.tward.engine.board.MoveDescriber
-import com.tward.engine.board.Piece
-import com.tward.engine.board.PieceType
-import com.tward.engine.board.Square
+import com.tward.engine.board.*
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.Player

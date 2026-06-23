@@ -57,6 +57,7 @@ fun ChessBoardView(
                         square == selected -> Color.Yellow
                         square == lastMoveFrom || square == lastMoveTo ->
                             if (light) Color(0xFFCDD26A) else Color(0xFFAAA23A)
+
                         light -> Color(0xFFF0D9B5)
                         else -> Color(0xFFB58863)
                     }

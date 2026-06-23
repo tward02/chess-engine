@@ -7,15 +7,11 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.board.Board
-import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.Player
-import com.tward.engine.player.bot.MiniMaxBot
-import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
-import com.tward.engine.player.evaluator.AdaptiveEvaluator
-import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
+import com.tward.engine.player.bot.RandomBot
 import com.tward.logging.Log
 import com.tward.logging.LogConfig
 import com.tward.ui.model.ChessMatch
@@ -35,21 +31,23 @@ fun main() = application {
     log.info { "Starting head-to-head game" }
 
     // --- Configure the match here ---
-    val whitePlayer: Player = BotPlayer(
-        MiniMaxBot(
-            depth = 5,
-            colour = Colour.WHITE,
-            evaluator = AdaptiveEvaluator(),
-            moveOrderer = KillerHistoryMoveOrderer()
-        ), name = "MiniMax"
-    )
-    val blackPlayer: Player = BotPlayer(
-        MiniMaxIterativeDeepeningBot(
-            colour = Colour.BLACK,
-            evaluator = AdaptiveEvaluator(),
-            moveOrderer = KillerHistoryMoveOrderer()
-        ), name = "MiniMax Iterative Deepening"
-    )
+    val whitePlayer: Player = HumanPlayer("Test")
+//        BotPlayer(
+//        MiniMaxBot(
+//            depth = 5,
+//            colour = Colour.WHITE,
+//            evaluator = AdaptiveEvaluator(),
+//            moveOrderer = KillerHistoryMoveOrderer()
+//        ), name = "MiniMax"
+//    )
+    val blackPlayer: Player = BotPlayer(RandomBot(), name = "Random")
+//        BotPlayer(
+//        MiniMaxIterativeDeepeningBot(
+//            colour = Colour.BLACK,
+//            evaluator = AdaptiveEvaluator(),
+//            moveOrderer = KillerHistoryMoveOrderer()
+//        ), name = "MiniMax Iterative Deepening"
+//    )
     // Alternatives: BotPlayer(...) + BotPlayer(...) for bot-vs-bot, HumanPlayer() + HumanPlayer() for 2-player
     val timeControl = TimeControl(initialMillis = 120_000, incrementMillis = 200)
     // --------------------------------

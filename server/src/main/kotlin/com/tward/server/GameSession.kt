@@ -6,9 +6,7 @@ import com.tward.engine.board.Move
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
 import com.tward.engine.player.ChessBot
-import com.tward.shared.GameStateDto
-import com.tward.shared.GameStatus
-import com.tward.shared.ServerMessage
+import com.tward.shared.*
 import com.tward.uci.UciMoveCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +47,7 @@ class GameSession(
     private var blackMillis = initialTimeMillis
     private var lastMove: Move? = null
     private var status = GameStatus.IN_PROGRESS
+    private var termination = Termination.ONGOING
     private var turnStartNanos = System.nanoTime()
 
     private val _events = MutableSharedFlow<ServerMessage>(replay = 1, extraBufferCapacity = 16)
@@ -93,8 +92,9 @@ class GameSession(
     suspend fun resign(byColour: Colour): GameStateDto = mutex.withLock {
         if (status == GameStatus.IN_PROGRESS) {
             status = if (byColour == Colour.WHITE) GameStatus.BLACK_WON else GameStatus.WHITE_WON
+            termination = Termination.RESIGNATION
             _events.tryEmit(ServerMessage.State(toDto()))
-            _events.tryEmit(ServerMessage.GameOver(status, "resignation"))
+            _events.tryEmit(ServerMessage.GameOver(status, describeOutcome(status, termination)))
         }
         toDto()
     }
@@ -115,12 +115,15 @@ class GameSession(
         game.makeMove(move)
         lastMove = move
         chargeClock(mover)
-        if (status == GameStatus.IN_PROGRESS) status = boardStatus()
+        if (status == GameStatus.IN_PROGRESS) {
+            status = boardStatus()
+            if (status != GameStatus.IN_PROGRESS) termination = terminationOf(game.getGameResult())
+        }
         turnStartNanos = System.nanoTime()
 
         _events.tryEmit(ServerMessage.State(toDto()))
         if (status != GameStatus.IN_PROGRESS) {
-            _events.tryEmit(ServerMessage.GameOver(status, game.getGameResult()?.toString() ?: "game over"))
+            _events.tryEmit(ServerMessage.GameOver(status, describeOutcome(status, termination)))
         }
     }
 
@@ -128,11 +131,27 @@ class GameSession(
         val elapsedMs = (System.nanoTime() - turnStartNanos) / 1_000_000
         if (mover == Colour.WHITE) {
             whiteMillis = whiteMillis - elapsedMs + incrementMillis
-            if (whiteMillis <= 0) { whiteMillis = 0; status = GameStatus.BLACK_WON }
+            if (whiteMillis <= 0) {
+                whiteMillis = 0; status = GameStatus.BLACK_WON; termination = Termination.TIMEOUT
+            }
         } else {
             blackMillis = blackMillis - elapsedMs + incrementMillis
-            if (blackMillis <= 0) { blackMillis = 0; status = GameStatus.WHITE_WON }
+            if (blackMillis <= 0) {
+                blackMillis = 0; status = GameStatus.WHITE_WON; termination = Termination.TIMEOUT
+            }
         }
+    }
+
+    private fun terminationOf(result: GameResult?): Termination = when (result) {
+        GameResult.WHITE_WIN, GameResult.BLACK_WIN -> Termination.CHECKMATE
+        GameResult.WHITE_TIME_WIN, GameResult.BLACK_TIME_WIN -> Termination.TIMEOUT
+        GameResult.WHITE_RESIGNATION, GameResult.BLACK_RESIGNATION -> Termination.RESIGNATION
+        GameResult.DRAW_STALEMATE -> Termination.STALEMATE
+        GameResult.DRAW_THREEFOLD_REPETITION -> Termination.THREEFOLD_REPETITION
+        GameResult.DRAW_50_MOVE_RULE -> Termination.FIFTY_MOVE_RULE
+        GameResult.DRAW_INSUFFICIENT_MATERIAL -> Termination.INSUFFICIENT_MATERIAL
+        GameResult.DRAW_AGREED -> Termination.AGREEMENT
+        null -> Termination.ONGOING
     }
 
     private fun boardStatus(): GameStatus = when (val result = game.getGameResult()) {
@@ -152,6 +171,7 @@ class GameSession(
         whiteMillis = whiteMillis,
         blackMillis = blackMillis,
         status = status,
+        termination = termination,
         legalMoves = if (status == GameStatus.IN_PROGRESS) {
             game.getLegalMoves().map { UciMoveCodec.encode(it) }
         } else {

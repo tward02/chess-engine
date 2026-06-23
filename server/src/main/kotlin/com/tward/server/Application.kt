@@ -80,7 +80,10 @@ fun Application.module() {
             val session = registry.get(call.parameters["id"].orEmpty())
                 ?: return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("no such game"))
             val colour = session.soleHumanColour()
-                ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Use the WebSocket to move in this game"))
+                ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse("Use the WebSocket to move in this game")
+                )
             val move = call.receive<MoveRequest>()
             call.respond(session.submitMove(move.uci, colour))
         }
@@ -109,6 +112,7 @@ fun Application.module() {
                                 val mover = colour ?: throw GameException("Spectators cannot move")
                                 session.submitMove(message.uci, mover)
                             }
+
                             ClientMessage.Resign -> {
                                 val mover = colour ?: throw GameException("Spectators cannot resign")
                                 session.resign(mover)

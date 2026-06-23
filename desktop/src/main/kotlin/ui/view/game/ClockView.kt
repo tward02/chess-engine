@@ -6,12 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tward.engine.board.Colour
+import com.tward.ui.board.formatClock
 import com.tward.ui.model.ClockManager
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
@@ -83,21 +79,5 @@ fun ChessClock(clockManager: ClockManager, colour: Colour, isActive: Boolean, na
             )
         }
 
-    }
-}
-
-fun formatClock(millis: Long): String {
-
-    val clamped = millis.coerceAtLeast(0)
-    val totalSeconds = clamped / 1000
-
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-
-    // Tenths are only worth showing in the final minute
-    return if (totalSeconds < 60) {
-        String.format("%d:%02d.%d", minutes, seconds, (clamped % 1000) / 100)
-    } else {
-        String.format("%d:%02d", minutes, seconds)
     }
 }
