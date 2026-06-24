@@ -24,7 +24,7 @@ private const val SQUARE_SIZE = 72
 private const val BOARD_WIDTH = SQUARE_SIZE * 8
 
 @Composable
-fun GameScreen(client: ChessClient) {
+fun GameScreen(client: ChessClient, showLegalMoves: Boolean = true) {
     var showEndDialog by remember { mutableStateOf(true) }
 
     Column(
@@ -60,7 +60,7 @@ fun GameScreen(client: ChessClient) {
         Column(Modifier.width(BOARD_WIDTH.dp)) {
             PlayerPanel(topColour, game, captured)
             Spacer(Modifier.height(6.dp))
-            BoardGrid(client, game.fen, game.lastMove)
+            BoardGrid(client, game, showLegalMoves)
             Spacer(Modifier.height(6.dp))
             PlayerPanel(client.myColour, game, captured)
         }
@@ -110,15 +110,26 @@ private fun PlayerPanel(colourName: String, game: GameStateDto, captured: Captur
 }
 
 @Composable
-private fun BoardGrid(client: ChessClient, fen: String, lastMove: String?) {
-    val board = remember(fen) { Board.fromFEN(fen) }
+private fun BoardGrid(client: ChessClient, game: GameStateDto, showLegalMoves: Boolean) {
+    val board = remember(game.fen) { Board.fromFEN(game.fen) }
+    val lastMove = game.lastMove
+
+    // When the toggle is on and a piece is selected, highlight the squares it can move to.
+    val selected = client.selected
+    val legalTargets = if (showLegalMoves && selected != null) {
+        legalTargetsFor(game.legalMoves, selected)
+    } else {
+        emptySet()
+    }
+
     ChessBoardView(
         pieceAt = { board.getPiece(it) },
         orientation = if (client.myColour == "black") Colour.BLACK else Colour.WHITE,
         squareSize = SQUARE_SIZE,
-        selected = client.selected,
+        selected = selected,
         lastMoveFrom = lastMove?.let { Square.fromString(it.take(2)) },
         lastMoveTo = lastMove?.let { Square.fromString(it.substring(2, 4)) },
+        legalTargets = legalTargets,
         onSquareClick = { client.clickSquare(it) }
     )
 
@@ -126,3 +137,9 @@ private fun BoardGrid(client: ChessClient, fen: String, lastMove: String?) {
         client.makePromotionMove(it)
     }
 }
+
+/** The destination squares of every legal move that starts on [from]. */
+internal fun legalTargetsFor(legalMoves: List<String>, from: Square): Set<Square> =
+    legalMoves.filter { it.take(2) == from.toString() }
+        .map { Square.fromString(it.substring(2, 4)) }
+        .toSet()

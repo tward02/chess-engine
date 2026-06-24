@@ -8,9 +8,12 @@ import com.tward.engine.game.GameResult
 import com.tward.engine.player.ChessBot
 import com.tward.shared.*
 import com.tward.uci.UciMoveCodec
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -32,7 +35,8 @@ class GameSession(
     private val white: Participant,
     private val black: Participant,
     initialTimeMillis: Long,
-    private val incrementMillis: Long
+    private val incrementMillis: Long,
+    scope: CoroutineScope
 ) {
 
     private val game = ChessGame(Board.getStartingBoard())
@@ -55,6 +59,9 @@ class GameSession(
 
     init {
         _events.tryEmit(ServerMessage.State(toDto()))
+        // A flagged clock is otherwise only noticed on the next move; this watcher ends a timed game
+        // as soon as the side to move runs out of time, even if they never move again.
+        if (initialTimeMillis > 0) scope.launch { watchClock() }
     }
 
     /** The colour a player controls, or null if they're not in this game. */
@@ -163,6 +170,34 @@ class GameSession(
 
     private fun clockOf(colour: Colour): Long = if (colour == Colour.WHITE) whiteMillis else blackMillis
 
+    // Polls the side-to-move's live clock and ends the game the moment it hits zero. Runs until the
+    // game is over (by timeout or otherwise), then stops.
+    private suspend fun watchClock() {
+        while (true) {
+            delay(CLOCK_TICK_MILLIS)
+            val finished = mutex.withLock {
+                if (status == GameStatus.IN_PROGRESS) flagIfTimedOut()
+                status != GameStatus.IN_PROGRESS
+            }
+            if (finished) break
+        }
+    }
+
+    private fun flagIfTimedOut() {
+        val active = game.board.activeColour
+        val remaining = clockOf(active) - (System.nanoTime() - turnStartNanos) / 1_000_000
+        if (remaining > 0) return
+
+        if (active == Colour.WHITE) {
+            whiteMillis = 0; status = GameStatus.BLACK_WON
+        } else {
+            blackMillis = 0; status = GameStatus.WHITE_WON
+        }
+        termination = Termination.TIMEOUT
+        _events.tryEmit(ServerMessage.State(toDto()))
+        _events.tryEmit(ServerMessage.GameOver(status, describeOutcome(status, termination)))
+    }
+
     private fun toDto(): GameStateDto = GameStateDto(
         gameId = id,
         fen = game.board.toFEN(),
@@ -178,4 +213,8 @@ class GameSession(
             emptyList()
         }
     )
+
+    private companion object {
+        const val CLOCK_TICK_MILLIS = 200L
+    }
 }

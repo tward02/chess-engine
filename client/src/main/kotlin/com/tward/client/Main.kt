@@ -34,16 +34,20 @@ fun main() = application {
 
         var darkOverride by remember { mutableStateOf<Boolean?>(null) }
         val dark = darkOverride ?: isSystemInDarkTheme()
+        var showLegalMoves by remember { mutableStateOf(true) }
 
         ChessTheme(darkTheme = dark) {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
                 Column(Modifier.fillMaxSize()) {
-                    TopBar(dark = dark, onSetDark = { darkOverride = it })
+                    TopBar(
+                        dark = dark, onSetDark = { darkOverride = it },
+                        showLegalMoves = showLegalMoves, onSetLegalMoves = { showLegalMoves = it }
+                    )
                     Box(Modifier.weight(1f).fillMaxSize()) {
                         when (client.screen) {
                             Screen.CONNECT -> ConnectScreen(client)
                             Screen.LOBBY -> LobbyScreen(client)
-                            Screen.GAME -> GameScreen(client)
+                            Screen.GAME -> GameScreen(client, showLegalMoves)
                         }
                     }
                 }
@@ -53,7 +57,12 @@ fun main() = application {
 }
 
 @Composable
-private fun TopBar(dark: Boolean, onSetDark: (Boolean) -> Unit) {
+private fun TopBar(
+    dark: Boolean,
+    onSetDark: (Boolean) -> Unit,
+    showLegalMoves: Boolean,
+    onSetLegalMoves: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth().background(MaterialTheme.colors.primary)
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -61,6 +70,10 @@ private fun TopBar(dark: Boolean, onSetDark: (Boolean) -> Unit) {
     ) {
         Text("♟  Chess", color = MaterialTheme.colors.onPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.weight(1f))
+        Text("Show moves", color = MaterialTheme.colors.onPrimary, fontSize = 13.sp)
+        Spacer(Modifier.width(6.dp))
+        Switch(checked = showLegalMoves, onCheckedChange = onSetLegalMoves)
+        Spacer(Modifier.width(16.dp))
         Text("Dark", color = MaterialTheme.colors.onPrimary, fontSize = 13.sp)
         Spacer(Modifier.width(6.dp))
         Switch(checked = dark, onCheckedChange = onSetDark)

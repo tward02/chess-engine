@@ -3,10 +3,12 @@ package com.tward.server
 import com.tward.shared.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
+import io.ktor.websocket.*
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -96,5 +98,32 @@ class ServerTest {
             setBody(MoveRequest("e2e5"))   // not a legal opening move
         }
         assertEquals(HttpStatusCode.BadRequest, res.status)
+    }
+
+    @Test
+    fun `a player who runs out of time loses even without moving`() = testApplication {
+        application { module() }
+        val client = createClient {
+            install(ContentNegotiation) { json(json) }
+            install(WebSockets)
+        }
+        // Human is White with a 100ms clock; the bot is Black. White never moves, so White must flag.
+        val start: GameStateDto = client.post("/api/games") {
+            contentType(ContentType.Application.Json)
+            setBody(CreateGameRequest(botId = "randall", playerColour = "white", initialTimeMillis = 100))
+        }.body()
+
+        var finalStatus: GameStatus? = null
+        client.webSocket("/ws/games/${start.gameId}?colour=white") {
+            for (frame in incoming) {
+                if (frame !is Frame.Text) continue
+                val message = json.decodeFromString<ServerMessage>(frame.readText())
+                if (message is ServerMessage.GameOver) {
+                    finalStatus = message.status
+                    break
+                }
+            }
+        }
+        assertEquals(GameStatus.BLACK_WON, finalStatus)   // White flagged, so Black wins
     }
 }

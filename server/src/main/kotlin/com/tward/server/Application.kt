@@ -18,6 +18,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -32,9 +33,10 @@ fun main() {
 }
 
 fun Application.module() {
-    val registry = GameRegistry()
-    val lobbyScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val lobby = LobbyManager(registry, lobbyScope)
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val registry = GameRegistry(scope)
+    val lobby = LobbyManager(registry, scope)
+    monitor.subscribe(ApplicationStopped) { scope.cancel() }
 
     install(ContentNegotiation) { json(json) }
     install(WebSockets)
