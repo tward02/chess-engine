@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Thrown for client errors (illegal move, not your turn, game over); mapped to HTTP 400 / WS error. */
 class GameException(message: String) : RuntimeException(message)
@@ -174,7 +175,7 @@ class GameSession(
     // game is over (by timeout or otherwise), then stops.
     private suspend fun watchClock() {
         while (true) {
-            delay(CLOCK_TICK_MILLIS)
+            delay(CLOCK_TICK_MILLIS.milliseconds)
             val finished = mutex.withLock {
                 if (status == GameStatus.IN_PROGRESS) flagIfTimedOut()
                 status != GameStatus.IN_PROGRESS

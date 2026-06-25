@@ -39,13 +39,14 @@ fun main() = application {
         )
     }
 
-    val specB = BotSpec("Negamax") { colour ->
-        NegamaxBot(
+    val specB = BotSpec("Advanced Negamax Meta Book") { colour ->
+        AdvancedNegamaxBot(
             colour = colour,
+            bookName = "/moveBook/BotBook.txt"
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 24, initialTimeMillis = 180_000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
 
     Window(
         onCloseRequest = ::exitApplication,

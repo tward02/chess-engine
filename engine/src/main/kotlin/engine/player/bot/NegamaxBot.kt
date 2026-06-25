@@ -51,7 +51,7 @@ open class NegamaxBot(
 
     private val log = Log.of<NegamaxBot>()
 
-    private val openingBook = OpeningBook("/moveBook/Book.txt")
+    protected open val openingBook = OpeningBook("/moveBook/Book.txt")
     private var numberOfOpeningMoves = 0
 
     // Captures/promotions in quiescence are ordered by MVV-LVA only; no killer/history there.
@@ -121,7 +121,7 @@ open class NegamaxBot(
 
         openingBook.getBookMove(fen)?.moveStr?.let { bookMoveStr ->
             legalMoves.firstOrNull { it.toAlgebraic() == bookMoveStr }?.let {
-                log.debug { "$colour played book move ${it.toAlgebraic()} (move $numberOfOpeningMoves)" }
+                log.info { "$colour played book move ${it.toAlgebraic()} (move $numberOfOpeningMoves)" }
                 return it
             }
         }

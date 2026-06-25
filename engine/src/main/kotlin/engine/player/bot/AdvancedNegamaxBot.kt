@@ -5,6 +5,7 @@ import com.tward.engine.board.Colour
 import com.tward.engine.board.Move
 import com.tward.engine.board.PieceType
 import com.tward.engine.game.ChessGame
+import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.evaluator.CompactEvaluator
 import com.tward.engine.player.evaluator.Evaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
@@ -48,10 +49,13 @@ open class AdvancedNegamaxBot(
     private val useLateMoveReductions: Boolean = true,
     private val useStaticExchangePruning: Boolean = true,
     private val useAspirationWindows: Boolean = true,
-    transpositionTableBits: Int = 20
+    transpositionTableBits: Int = 20,
+    bookName: String = "/moveBook/Book.txt"
 ) : NegamaxBot(
     colour, maxDepth, fixedDepth, useOpeningBookMoves, maxBookMoves, maxThinkTimeMillis, evaluator, moveOrderer
 ) {
+
+    override val openingBook = OpeningBook(bookName)
 
     // Transposition table as parallel primitive arrays (one slot per index; always-replace). The
     // full key is stored and verified on probe, so index collisions never return a wrong entry.
