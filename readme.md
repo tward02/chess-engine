@@ -120,7 +120,7 @@ in centipawns from White's perspective.
 
 ---
 
-## 🔌 Play on Lichess (UCI)
+## Play on Lichess (UCI)
 
 The engine speaks UCI, so it can run in any UCI GUI or play **rated games on Lichess** through the
 [`lichess-bot`](https://github.com/lichess-bot-devs/lichess-bot) bridge.
