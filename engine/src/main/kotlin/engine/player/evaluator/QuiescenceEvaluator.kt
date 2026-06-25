@@ -27,19 +27,29 @@ class QuiescenceEvaluator(
     }
 
     private fun quiesce(game: ChessGame, alpha: Int, beta: Int, pliesLeft: Int): Int {
-        // Stand pat: side to move isn't obliged to capture, so the static score bounds this node.
+        val maximising = game.board.activeColour == Colour.WHITE
+        val inCheck = game.isInCheck(game.board.activeColour)
         val standPat = base.evaluate(game)
+
         if (pliesLeft == 0) return standPat
 
-        val forcingMoves = game.getLegalMoves()
-            .filter { it.capturedPiece != null || it.promotionType != null }
-        if (forcingMoves.isEmpty()) return standPat
+        // When in check the side to move is forced to respond, so there is no "stand pat" floor and
+        // every legal evasion must be explored — quiet blocks and king moves included, not just
+        // captures. This is what removes the swing from a check that is trivially answered: the
+        // position is played past the check before [base] scores it, instead of [base] seeing a
+        // raw in-check board and over/under-valuing it.
+        val moves = if (inCheck) {
+            game.getLegalMoves()
+        } else {
+            game.getLegalMoves().filter { it.capturedPiece != null || it.promotionType != null }
+        }
+        if (moves.isEmpty()) return standPat
 
-        val ordered = captureOrderer.order(forcingMoves, ply = 0)
-        val maximising = game.board.activeColour == Colour.WHITE
+        val ordered = captureOrderer.order(moves, ply = 0)
 
         if (maximising) {
-            var best = standPat
+            // No stand-pat floor in check: must move, so start below every score.
+            var best = if (inCheck) Int.MIN_VALUE else standPat
             var currentAlpha = maxOf(alpha, best)
             for (move in ordered) {
                 game.makeMove(move)
@@ -52,7 +62,7 @@ class QuiescenceEvaluator(
             }
             return best
         } else {
-            var best = standPat
+            var best = if (inCheck) Int.MAX_VALUE else standPat
             var currentBeta = minOf(beta, best)
             for (move in ordered) {
                 game.makeMove(move)
