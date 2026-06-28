@@ -62,7 +62,11 @@ class OpeningBook(file: String) {
         private val parsedBooks = ConcurrentHashMap<String, Map<String, List<BookMove>>>()
 
         private fun parse(file: String): Map<String, List<BookMove>> {
-            val contents = OpeningBook::class.java.getResource(file)?.readText() ?: return emptyMap()
+            // Normalise line endings so a CRLF checkout (Windows git autocrlf) doesn't leave a
+            // trailing '\r' on each play count, which would break the toInt() below.
+            val contents = (OpeningBook::class.java.getResource(file)?.readText() ?: return emptyMap())
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
 
             val movesByPosition = mutableMapOf<String, List<BookMove>>()
             val entries = contents.trim(' ', '\n').split("pos").drop(1)
