@@ -4,6 +4,7 @@ import com.tward.engine.board.Colour
 import com.tward.engine.player.ChessBot
 import com.tward.engine.player.bot.*
 import com.tward.engine.player.evaluator.*
+import com.tward.engine.player.ordering.CounterMoveOrderer
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
 import com.tward.engine.player.ordering.MoveOrderer
 import com.tward.engine.player.ordering.MvvLvaMoveOrderer
@@ -11,11 +12,11 @@ import com.tward.engine.player.ordering.NoOpMoveOrderer
 import com.tward.shared.BotInfo
 
 /** Which search algorithm a bot uses. */
-enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED }
+enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED, ELITE, APEX }
 
-enum class EvaluatorType { BASIC, STANDARD, ADAPTIVE, POSITIONAL, COMPACT, ADVANCED }
+enum class EvaluatorType { BASIC, STANDARD, ADAPTIVE, POSITIONAL, COMPACT, ADVANCED, CONVERSION }
 
-enum class OrdererType { NONE, MVV_LVA, KILLER_HISTORY }
+enum class OrdererType { NONE, MVV_LVA, KILLER_HISTORY, COUNTER_MOVE }
 
 /**
  * A complete, data-only description of an opponent bot: display info plus the engine knobs (search
@@ -102,6 +103,17 @@ object BotCatalog {
         BotSpec(
             "grandmaster-greg", "Grandmaster Greg", 2250, "The strongest setup with a long think.",
             "Strongest", BotType.ADVANCED, evaluator = EvaluatorType.COMPACT, maxThinkTimeMillis = 4_000
+        ),
+        BotSpec(
+            "elite-elena", "Elite Elena", 2350,
+            "Futility pruning, late-move pruning and countermove ordering on top of the full advanced search.",
+            "Strongest", BotType.ELITE, orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
+        ),
+        BotSpec(
+            "apex-alexei", "Apex Alexei", 2400,
+            "The elite search plus contempt and endgame conversion — hates draws and grinds wins out.",
+            "Relentless", BotType.APEX, evaluator = EvaluatorType.CONVERSION,
+            orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
         )
     )
 
@@ -137,6 +149,16 @@ object BotFactory {
             colour = colour, useOpeningBookMoves = spec.useOpeningBook,
             maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
         )
+
+        BotType.ELITE -> EliteNegamaxBot(
+            colour = colour, useOpeningBookMoves = spec.useOpeningBook,
+            maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
+        )
+
+        BotType.APEX -> ApexNegamaxBot(
+            colour = colour, useOpeningBookMoves = spec.useOpeningBook,
+            maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
+        )
     }
 
     // Fresh instances per bot — evaluators/orderers may hold per-search state and aren't thread-safe.
@@ -147,11 +169,13 @@ object BotFactory {
         EvaluatorType.POSITIONAL -> PositionalEvaluator(aggression = spec.aggression)
         EvaluatorType.COMPACT -> CompactEvaluator()
         EvaluatorType.ADVANCED -> AdvancedEvaluator()
+        EvaluatorType.CONVERSION -> EndgameConversionEvaluator()
     }
 
     private fun orderer(spec: BotSpec): MoveOrderer = when (spec.orderer) {
         OrdererType.NONE -> NoOpMoveOrderer
         OrdererType.MVV_LVA -> MvvLvaMoveOrderer()
         OrdererType.KILLER_HISTORY -> KillerHistoryMoveOrderer()
+        OrdererType.COUNTER_MOVE -> CounterMoveOrderer()
     }
 }

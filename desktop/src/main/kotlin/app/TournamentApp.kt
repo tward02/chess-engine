@@ -7,7 +7,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.player.bot.AdvancedNegamaxBot
-import com.tward.engine.player.bot.NegamaxBot
+import com.tward.engine.player.bot.ApexNegamaxBot
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
@@ -39,14 +39,13 @@ fun main() = application {
         )
     }
 
-    val specB = BotSpec("Advanced Negamax Meta Book") { colour ->
-        AdvancedNegamaxBot(
+    val specB = BotSpec("Apex Negamax") { colour ->
+        ApexNegamaxBot(
             colour = colour,
-            bookName = "/moveBook/BotBook.txt"
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
+    val tournament = Tournament(specA, specB, totalGames = 50, initialTimeMillis = 120_000)
 
     Window(
         onCloseRequest = ::exitApplication,

@@ -60,7 +60,9 @@ open class NegamaxBot(
     var nodesSearched = 0
         protected set
 
-    private var deadlineNanos = Long.MAX_VALUE
+    // Protected so subclasses can implement smarter time management (e.g. stopping a stable search
+    // early by pulling the deadline forward). Base behaviour is unchanged.
+    protected var deadlineNanos = Long.MAX_VALUE
     protected var searchAborted = false
 
     override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
