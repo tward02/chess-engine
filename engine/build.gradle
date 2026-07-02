@@ -33,6 +33,35 @@ tasks.register('longTest', Test) {
     classpath = sourceSets.test.runtimeClasspath
 
     useJUnitPlatform()
+
+    // Lets the A/B harnesses be resized from the command line, e.g. -Pnnue.ab.games=10
+    ['nnue.ab.games', 'nnue.ab.timeMillis'].each { name ->
+        def value = providers.gradleProperty(name)
+        if (value.present) systemProperty name, value.get()
+    }
+}
+
+// NNUE pipeline. Override the defaults with -PnnueArgs, e.g.
+//   .\gradlew.bat :engine:generateNnueData "-PnnueArgs=games=5000 depth=4"
+//   .\gradlew.bat :engine:trainNnue "-PnnueArgs=epochs=20 hidden=256"
+def nnueArgs = providers.gradleProperty('nnueArgs')
+
+tasks.register('generateNnueData', JavaExec) {
+    description = 'Generates NNUE training data by bot self-play'
+    group = 'nnue'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.nnue.TrainingDataGeneratorKt'
+    maxHeapSize = '3g'
+    if (nnueArgs.present) args nnueArgs.get().split(' ')
+}
+
+tasks.register('trainNnue', JavaExec) {
+    description = 'Trains the NNUE network and writes it over the bundled resource'
+    group = 'nnue'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.nnue.NnueTrainerKt'
+    maxHeapSize = '4g'
+    if (nnueArgs.present) args nnueArgs.get().split(' ')
 }
 
 tasks.withType(Test).configureEach {

@@ -6,8 +6,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.tward.engine.player.bot.AdvancedNegamaxBot
 import com.tward.engine.player.bot.ApexNegamaxBot
+import com.tward.engine.player.bot.NeuralNegamaxBot
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
@@ -33,8 +33,8 @@ fun main() = application {
     )
 
     // Each spec builds a fresh bot per game; the opening book gives varied openings across games
-    val specA = BotSpec("Advanced Negamax") { colour ->
-        AdvancedNegamaxBot(
+    val specA = BotSpec("Neural Negamax") { colour ->
+        NeuralNegamaxBot(
             colour = colour
         )
     }
@@ -45,7 +45,7 @@ fun main() = application {
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 50, initialTimeMillis = 120_000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
 
     Window(
         onCloseRequest = ::exitApplication,

@@ -12,9 +12,9 @@ import com.tward.engine.player.ordering.NoOpMoveOrderer
 import com.tward.shared.BotInfo
 
 /** Which search algorithm a bot uses. */
-enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED, ELITE, APEX }
+enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED, ELITE, APEX, NEURAL }
 
-enum class EvaluatorType { BASIC, STANDARD, ADAPTIVE, POSITIONAL, COMPACT, ADVANCED, CONVERSION }
+enum class EvaluatorType { BASIC, STANDARD, ADAPTIVE, POSITIONAL, COMPACT, ADVANCED, CONVERSION, NNUE }
 
 enum class OrdererType { NONE, MVV_LVA, KILLER_HISTORY, COUNTER_MOVE }
 
@@ -114,6 +114,12 @@ object BotCatalog {
             "The elite search plus contempt and endgame conversion — hates draws and grinds wins out.",
             "Relentless", BotType.APEX, evaluator = EvaluatorType.CONVERSION,
             orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
+        ),
+        BotSpec(
+            "neural-nina", "Neural Nina", 2450,
+            "The apex search with a neural-network evaluation trained on the engine's own games.",
+            "Learned", BotType.NEURAL, evaluator = EvaluatorType.NNUE,
+            orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
         )
     )
 
@@ -159,6 +165,11 @@ object BotFactory {
             colour = colour, useOpeningBookMoves = spec.useOpeningBook,
             maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
         )
+
+        BotType.NEURAL -> NeuralNegamaxBot(
+            colour = colour, useOpeningBookMoves = spec.useOpeningBook,
+            maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
+        )
     }
 
     // Fresh instances per bot — evaluators/orderers may hold per-search state and aren't thread-safe.
@@ -170,6 +181,7 @@ object BotFactory {
         EvaluatorType.COMPACT -> CompactEvaluator()
         EvaluatorType.ADVANCED -> AdvancedEvaluator()
         EvaluatorType.CONVERSION -> EndgameConversionEvaluator()
+        EvaluatorType.NNUE -> NnueEvaluator()
     }
 
     private fun orderer(spec: BotSpec): MoveOrderer = when (spec.orderer) {
