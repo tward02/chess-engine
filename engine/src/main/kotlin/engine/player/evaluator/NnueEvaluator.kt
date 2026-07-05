@@ -28,9 +28,10 @@ class NnueEvaluator(private val network: NnueNetwork = NnueNetwork.default()) : 
         network.ftBias.copyInto(whiteAcc)
         network.ftBias.copyInto(blackAcc)
 
-        for ((square, piece) in board.getPiecesWithSquares()) {
-            val whiteBase = NnueFeatures.index(Colour.WHITE, piece, square) * hidden
-            val blackBase = NnueFeatures.index(Colour.BLACK, piece, square) * hidden
+        board.forEachPiece { col, row, piece ->
+            val whiteIndex = NnueFeatures.index(Colour.WHITE, piece.colour, piece.type, col, row)
+            val whiteBase = whiteIndex * hidden
+            val blackBase = NnueFeatures.mirror(whiteIndex) * hidden
             for (h in 0 until hidden) {
                 whiteAcc[h] += weights[whiteBase + h]
                 blackAcc[h] += weights[blackBase + h]

@@ -5,7 +5,10 @@ import com.tward.engine.board.Colour
 import com.tward.engine.board.Move
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
+import com.tward.engine.player.ChessBot
 import com.tward.engine.player.bot.AdvancedNegamaxBot
+import com.tward.engine.player.bot.EliteNegamaxBot
+import com.tward.engine.player.bot.NeuralNegamaxBot
 import com.tward.engine.tournament.winner
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,6 +33,11 @@ class TrainingDataGenerator(
     private val searchDepth: Int,
     private val threads: Int,
     private val seed: Long,
+    /**
+     * Which search labels the positions: "advanced", "elite" (deeper for the time, thanks to its
+     * forward pruning) or "neural" (the current NNUE net playing itself — the self-improvement loop).
+     */
+    private val labelBot: String = "advanced",
     private val maxPlies: Int = 300
 ) {
 
@@ -66,8 +74,8 @@ class TrainingDataGenerator(
         }
         if (game.getGameResult() != null) return emptyList()   // the random opening ended the game
 
-        val white = ScoringBot(Colour.WHITE, searchDepth)
-        val black = ScoringBot(Colour.BLACK, searchDepth)
+        val white = scoringBot(Colour.WHITE)
+        val black = scoringBot(Colour.BLACK)
         val pending = mutableListOf<Pair<String, Int>>()
 
         var plies = 0
@@ -101,23 +109,57 @@ class TrainingDataGenerator(
         return pending.map { (fen, score) -> "$fen;$score;$whitePoints" }
     }
 
-    /** Exposes the root search score so each position is labelled by the search that chose its move. */
-    private class ScoringBot(colour: Colour, depth: Int) : AdvancedNegamaxBot(
+    private fun scoringBot(colour: Colour): ScoringBot = when (labelBot) {
+        "neural" -> NeuralScoringBot(colour, searchDepth)
+        "elite" -> EliteScoringBot(colour, searchDepth)
+        "advanced" -> AdvancedScoringBot(colour, searchDepth)
+        else -> throw IllegalArgumentException("unknown label bot '$labelBot' (use advanced, elite or neural)")
+    }
+
+    /** A bot that exposes the root search score, so each position is labelled by the search that chose its move. */
+    private interface ScoringBot : ChessBot {
+        val lastScore: Int           // side-to-move perspective
+        val lastBestMove: Move?
+    }
+
+    private class AdvancedScoringBot(colour: Colour, depth: Int) : AdvancedNegamaxBot(
         colour = colour, fixedDepth = depth, useOpeningBookMoves = false, transpositionTableBits = 18
-    ) {
-        var lastScore = 0            // side-to-move perspective
-            private set
-        var lastBestMove: Move? = null
-            private set
+    ), ScoringBot {
+        override var lastScore = 0
+        override var lastBestMove: Move? = null
 
         override fun searchRoot(
             game: ChessGame, depth: Int, previousBest: Move?, alpha: Int, beta: Int
-        ): Pair<Move, Int> {
-            val result = super.searchRoot(game, depth, previousBest, alpha, beta)
-            lastBestMove = result.first
-            lastScore = result.second
-            return result
-        }
+        ): Pair<Move, Int> = super.searchRoot(game, depth, previousBest, alpha, beta)
+            .also { lastBestMove = it.first; lastScore = it.second }
+    }
+
+    private class EliteScoringBot(colour: Colour, depth: Int) : EliteNegamaxBot(
+        colour = colour, fixedDepth = depth, useOpeningBookMoves = false, transpositionTableBits = 18
+    ), ScoringBot {
+        override var lastScore = 0
+        override var lastBestMove: Move? = null
+
+        override fun searchRoot(
+            game: ChessGame, depth: Int, previousBest: Move?, alpha: Int, beta: Int
+        ): Pair<Move, Int> = super.searchRoot(game, depth, previousBest, alpha, beta)
+            .also { lastBestMove = it.first; lastScore = it.second }
+    }
+
+    /**
+     * Generates with the current NNUE net itself — the self-improvement loop: each generation's
+     * data comes from the strongest player available, so the next net learns from better games.
+     */
+    private class NeuralScoringBot(colour: Colour, depth: Int) : NeuralNegamaxBot(
+        colour = colour, fixedDepth = depth, useOpeningBookMoves = false, transpositionTableBits = 18
+    ), ScoringBot {
+        override var lastScore = 0
+        override var lastBestMove: Move? = null
+
+        override fun searchRoot(
+            game: ChessGame, depth: Int, previousBest: Move?, alpha: Int, beta: Int
+        ): Pair<Move, Int> = super.searchRoot(game, depth, previousBest, alpha, beta)
+            .also { lastBestMove = it.first; lastScore = it.second }
     }
 
     private companion object {
@@ -133,8 +175,9 @@ fun main(args: Array<String>) {
     val depth = opts["depth"]?.toInt() ?: 4
     val threads = opts["threads"]?.toInt() ?: (Runtime.getRuntime().availableProcessors() - 1).coerceAtLeast(1)
     val seed = opts["seed"]?.toLong() ?: 20260702L
+    val bot = opts["bot"] ?: "advanced"
     val out = Paths.get(opts["out"] ?: "build/nnue/training-data.txt")
 
-    println("Generating NNUE data: games=$games depth=$depth threads=$threads seed=$seed out=$out")
-    TrainingDataGenerator(games, depth, threads, seed).generate(out)
+    println("Generating NNUE data: games=$games depth=$depth bot=$bot threads=$threads seed=$seed out=$out")
+    TrainingDataGenerator(games, depth, threads, seed, labelBot = bot).generate(out)
 }

@@ -217,6 +217,20 @@ class Board {
         return grid.flatten().filterNotNull()
     }
 
+    /**
+     * Visits every piece without allocating (unlike [getPiecesWithSquares]) — for evaluators on the
+     * search hot path, where the per-call list/pair/square allocations dominate the board scan.
+     */
+    fun forEachPiece(action: (col: Int, row: Int, piece: Piece) -> Unit) {
+        for (row in 0..7) {
+            val gridRow = grid[row]
+            for (col in 0..7) {
+                val piece = gridRow[col]
+                if (piece != null) action(col, row, piece)
+            }
+        }
+    }
+
     fun getPiecesWithSquares(): List<Pair<Square, Piece>> {
         val pieces = mutableListOf<Pair<Square, Piece>>()
         for (row in 0..7) {

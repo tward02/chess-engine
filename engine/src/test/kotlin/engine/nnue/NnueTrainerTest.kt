@@ -37,4 +37,19 @@ class NnueTrainerTest {
         assertTrue(eval("q3k3/8/8/8/8/8/8/4K3 w - - 0 1") < -100, "queen down must score clearly negative")
         assertTrue(Files.exists(out), "the trained network must be checkpointed to disk")
     }
+
+    @Test
+    fun `reads UTF-16 data files, as written by PowerShell redirection`(@TempDir dir: Path) {
+        // PowerShell's `>` and Set-Content write UTF-16 LE with a BOM by default; combining
+        // generation runs that way must not break training.
+        val lines = List(10) { "4k3/8/8/8/8/8/8/Q3K3 w - - 0 1;900;1" }
+        val data = dir.resolve("utf16.txt")
+        Files.write(data, lines.joinToString("\r\n").toByteArray(Charsets.UTF_16LE).let {
+            byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + it   // BOM
+        })
+
+        val net = NnueTrainer(hiddenSize = 4, epochs = 1, seed = 1L).train(data, dir.resolve("net.nnue"))
+
+        assertTrue(net.hiddenSize == 4, "training must succeed on a UTF-16 data file")
+    }
 }

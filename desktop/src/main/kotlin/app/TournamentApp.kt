@@ -45,7 +45,7 @@ fun main() = application {
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 180_000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 60_000)
 
     Window(
         onCloseRequest = ::exitApplication,

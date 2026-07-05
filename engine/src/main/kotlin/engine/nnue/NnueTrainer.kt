@@ -4,6 +4,11 @@ import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.player.evaluator.nnue.NnueFeatures
 import com.tward.engine.player.evaluator.nnue.NnueNetwork
+import java.io.BufferedInputStream
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -30,11 +35,17 @@ class NnueTrainer(
     private val seed: Long = 42L
 ) {
 
-    fun train(dataFile: Path, outFile: Path): NnueNetwork {
-        println("Loading training data from ${dataFile.toAbsolutePath()}")
+    fun train(dataFile: Path, outFile: Path): NnueNetwork = train(listOf(dataFile), outFile)
+
+    fun train(dataFiles: List<Path>, outFile: Path): NnueNetwork {
         val loadStart = System.currentTimeMillis()
-        val samples = load(dataFile)
-        require(samples.isNotEmpty()) { "no training samples in $dataFile" }
+        val samples = dataFiles.flatMap { file ->
+            println("Loading training data from ${file.toAbsolutePath()}")
+            load(file)
+        }
+        require(samples.isNotEmpty()) {
+            "no training samples in $dataFiles — is the file NNUE data (FEN;score;result lines)?"
+        }
         println("Loaded ${samples.size} positions in ${formatDuration(System.currentTimeMillis() - loadStart)}")
         println("Training: hidden=$hiddenSize epochs=$epochs lr=$learningRate blend=$resultBlend seed=$seed")
 
@@ -78,24 +89,72 @@ class NnueTrainer(
         val result: Float           // 1 / 0.5 / 0, side-to-move perspective
     )
 
-    private fun load(dataFile: Path): List<Sample> = Files.newBufferedReader(dataFile).useLines { lines ->
-        lines.mapNotNull { line ->
-            val parts = line.split(';')
-            if (parts.size != 3) return@mapNotNull null
-            val board = Board.fromFEN(parts[0])
-            val whiteScore = parts[1].toFloat()
-            val whiteResult = parts[2].toFloat()
-            val features = board.getPiecesWithSquares()
-                .map { (square, piece) -> NnueFeatures.index(Colour.WHITE, piece, square) }
-                .toIntArray()
-            val whiteToMove = board.activeColour == Colour.WHITE
-            Sample(
-                features = features,
-                whiteToMove = whiteToMove,
-                target = if (whiteToMove) whiteScore else -whiteScore,
-                result = if (whiteToMove) whiteResult else 1f - whiteResult
-            )
-        }.toList()
+    private fun load(dataFile: Path): List<Sample> {
+        var skipped = 0
+        val samples = openDetectingEncoding(dataFile).useLines { lines ->
+            lines.mapNotNull { line ->
+                val sample = try {
+                    parse(line)
+                } catch (_: Exception) {
+                    null
+                }
+                if (sample == null) skipped++
+                sample
+            }.toList()
+        }
+        if (skipped > 0) println("  skipped $skipped unparseable line(s) in $dataFile")
+        return samples
+    }
+
+    private fun parse(line: String): Sample? {
+        val parts = line.split(';')
+        if (parts.size != 3) return null
+        val board = Board.fromFEN(parts[0])
+        val whiteScore = parts[1].toFloat()
+        val whiteResult = parts[2].toFloat()
+        val features = board.getPiecesWithSquares()
+            .map { (square, piece) -> NnueFeatures.index(Colour.WHITE, piece, square) }
+            .toIntArray()
+        val whiteToMove = board.activeColour == Colour.WHITE
+        return Sample(
+            features = features,
+            whiteToMove = whiteToMove,
+            target = if (whiteToMove) whiteScore else -whiteScore,
+            result = if (whiteToMove) whiteResult else 1f - whiteResult
+        )
+    }
+
+    /**
+     * Opens the file honouring its byte-order mark. Windows tools (PowerShell `>` redirection,
+     * `Set-Content`) write UTF-16 by default, so naive UTF-8 reading of a combined data file dies
+     * with MalformedInputException; here that just works. Undecodable bytes are replaced rather than
+     * thrown, and the resulting garbage lines are skipped (and counted) by [load].
+     */
+    private fun openDetectingEncoding(dataFile: Path): BufferedReader {
+        val input = BufferedInputStream(Files.newInputStream(dataFile))
+        input.mark(3)
+        val bom = ByteArray(3)
+        var read = 0
+        while (read < 3) {
+            val n = input.read(bom, read, 3 - read)
+            if (n < 0) break
+            read += n
+        }
+        input.reset()
+
+        fun byte(i: Int) = bom[i].toInt() and 0xFF
+        val (charset, bomLength) = when {
+            read >= 2 && byte(0) == 0xFF && byte(1) == 0xFE -> StandardCharsets.UTF_16LE to 2
+            read >= 2 && byte(0) == 0xFE && byte(1) == 0xFF -> StandardCharsets.UTF_16BE to 2
+            read >= 3 && byte(0) == 0xEF && byte(1) == 0xBB && byte(2) == 0xBF -> StandardCharsets.UTF_8 to 3
+            else -> StandardCharsets.UTF_8 to 0
+        }
+        repeat(bomLength) { input.read() }
+
+        val decoder = charset.newDecoder()
+            .onMalformedInput(CodingErrorAction.REPLACE)
+            .onUnmappableCharacter(CodingErrorAction.REPLACE)
+        return BufferedReader(InputStreamReader(input, decoder))
     }
 
     /** Adam first/second moments for every parameter group, plus the reusable per-step buffers. */
@@ -206,11 +265,12 @@ class NnueTrainer(
 
 fun main(args: Array<String>) {
     val opts = args.associate { it.substringBefore('=') to it.substringAfter('=') }
-    val data = Paths.get(opts["data"] ?: "build/nnue/training-data.txt")
-    val out = Paths.get(opts["out"] ?: "src/main/resources/nnue/default.nnue")
+    // Comma-separated so multiple generation runs train together with no combining step.
+    val data = (opts["data"] ?: "build/nnue/training-data.txt").split(',').map(Paths::get)
+    val out = Paths.get(opts["out"] ?: "src/main/resources/nnue/new.nnue")
 
     val trainer = NnueTrainer(
-        hiddenSize = opts["hidden"]?.toInt() ?: 128,
+        hiddenSize = opts["hidden"]?.toInt() ?: 256,
         epochs = opts["epochs"]?.toInt() ?: 12,
         learningRate = opts["lr"]?.toFloat() ?: 0.001f,
         resultBlend = opts["blend"]?.toFloat() ?: 0.3f,

@@ -7,11 +7,13 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.board.Board
+import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.BotPlayer
 import com.tward.engine.player.HumanPlayer
 import com.tward.engine.player.Player
-import com.tward.engine.player.bot.RandomBot
+import com.tward.engine.player.bot.ApexNegamaxBot
+import com.tward.engine.player.bot.NeuralNegamaxBot
 import com.tward.logging.Log
 import com.tward.logging.LogConfig
 import com.tward.ui.model.ChessMatch
@@ -31,7 +33,7 @@ fun main() = application {
     log.info { "Starting head-to-head game" }
 
     // --- Configure the match here ---
-    val whitePlayer: Player = HumanPlayer("Test")
+    val blackPlayer: Player = BotPlayer(ApexNegamaxBot(colour = Colour.WHITE), "Test")
 //        BotPlayer(
 //        MiniMaxBot(
 //            depth = 5,
@@ -40,7 +42,7 @@ fun main() = application {
 //            moveOrderer = KillerHistoryMoveOrderer()
 //        ), name = "MiniMax"
 //    )
-    val blackPlayer: Player = BotPlayer(RandomBot(), name = "Random")
+    val whitePlayer: Player = BotPlayer(NeuralNegamaxBot(colour = Colour.BLACK), name = "Random")
 //        BotPlayer(
 //        MiniMaxIterativeDeepeningBot(
 //            colour = Colour.BLACK,
