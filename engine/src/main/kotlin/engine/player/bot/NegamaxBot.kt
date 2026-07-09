@@ -49,7 +49,7 @@ open class NegamaxBot(
     protected val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
 ) : ChessBot {
 
-    private val log = Log.of<NegamaxBot>()
+    private val log = Log.of(this)   // runtime class, so subclasses log under their own bot name
 
     protected open val openingBook = OpeningBook("/moveBook/Book.txt")
     private var numberOfOpeningMoves = 0

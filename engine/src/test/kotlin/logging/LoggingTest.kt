@@ -69,6 +69,21 @@ class LoggingTest {
         assertTrue(!built, "Disabled log level should not invoke the message lambda")
     }
 
+    private open class BaseBot { val log = Log.of(this) }
+    private class SubBot : BaseBot()
+
+    @Test
+    fun `instance logger is named after the runtime class, not the declaring superclass`() {
+
+        val name = SubBot::class.qualifiedName!!
+        val handler = attach(name, Level.INFO)
+
+        SubBot().log.info { "from subclass" }
+
+        assertEquals(1, handler.records.size)
+        assertEquals(name, handler.records.first().loggerName)
+    }
+
     private fun attach(name: String, level: Level): CapturingHandler {
         val logger = Logger.getLogger(name)
         logger.useParentHandlers = false

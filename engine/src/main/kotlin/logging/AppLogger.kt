@@ -37,4 +37,10 @@ object Log {
     fun of(name: String): AppLogger = AppLogger(Logger.getLogger(name))
 
     inline fun <reified T> of(): AppLogger = of(T::class.qualifiedName ?: T::class.java.name)
+
+    /**
+     * Logger named after the instance's runtime class. Use in open classes so subclasses log under
+     * their own name (the reified overload bakes in the compile-time class).
+     */
+    fun of(instance: Any): AppLogger = of(instance::class.qualifiedName ?: instance::class.java.name)
 }

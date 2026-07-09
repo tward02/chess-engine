@@ -6,8 +6,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.tward.engine.player.bot.ApexNegamaxBot
 import com.tward.engine.player.bot.NeuralNegamaxBot
+import com.tward.engine.player.evaluator.NnueEvaluator
+import com.tward.engine.player.evaluator.nnue.NnueNetwork.Companion.fromResource
 import com.tward.engine.tournament.BotSpec
 import com.tward.engine.tournament.Tournament
 import com.tward.logging.Log
@@ -33,19 +34,26 @@ fun main() = application {
     )
 
     // Each spec builds a fresh bot per game; the opening book gives varied openings across games
-    val specA = BotSpec("Neural Negamax") { colour ->
+    val specA = BotSpec("Neural Negamax New") { colour ->
         NeuralNegamaxBot(
-            colour = colour
-        )
-    }
-
-    val specB = BotSpec("Apex Negamax") { colour ->
-        ApexNegamaxBot(
             colour = colour,
+            evaluator = NnueEvaluator( fromResource("/nnue/default-better.nnue"))
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 60_000)
+//    val specB = BotSpec("Apex Negamax") { colour ->
+//        ApexNegamaxBot(
+//            colour = colour,
+//        )
+//    }
+    val specB = BotSpec("Neural Negamax") { colour ->
+        NeuralNegamaxBot(
+            colour = colour,
+            evaluator = NnueEvaluator()
+        )
+    }
+
+    val tournament = Tournament(specA, specB, totalGames = 250, initialTimeMillis = 180_000)
 
     Window(
         onCloseRequest = ::exitApplication,

@@ -270,7 +270,7 @@ fun main(args: Array<String>) {
     val out = Paths.get(opts["out"] ?: "src/main/resources/nnue/new.nnue")
 
     val trainer = NnueTrainer(
-        hiddenSize = opts["hidden"]?.toInt() ?: 256,
+        hiddenSize = opts["hidden"]?.toInt() ?: 128,
         epochs = opts["epochs"]?.toInt() ?: 12,
         learningRate = opts["lr"]?.toFloat() ?: 0.001f,
         resultBlend = opts["blend"]?.toFloat() ?: 0.3f,

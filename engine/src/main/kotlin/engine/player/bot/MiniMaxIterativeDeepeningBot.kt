@@ -21,7 +21,7 @@ class MiniMaxIterativeDeepeningBot(
     private val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
 ) : MiniMaxBot(maxDepth, colour, aggression, useOpeningBookMoves, evaluator, moveOrderer) {
 
-    private val log = Log.of<MiniMaxIterativeDeepeningBot>()
+    private val log = Log.of(this)
 
     private val maxThinkTime = 20000
     private val increment = 200

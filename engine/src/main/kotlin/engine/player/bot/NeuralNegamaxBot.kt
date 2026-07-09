@@ -13,7 +13,7 @@ import com.tward.engine.player.ordering.MoveOrderer
  * countermove ordering, adaptive time management and contempt — is inherited unchanged, so an A/B
  * run against [ApexNegamaxBot] isolates exactly one variable: the evaluation function.
  *
- * The network it plays with is whatever is bundled at `resources/nnue/default.nnue`; retraining and
+ * The network it plays with is whatever is bundled at `resources/nnue/iter1.nnue`; retraining and
  * replacing that file upgrades this bot without touching code. Construct one per game.
  */
 open class NeuralNegamaxBot(

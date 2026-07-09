@@ -25,7 +25,7 @@ open class MiniMaxBot(
     private val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
 ) : ChessBot {
 
-    private val log = Log.of<MiniMaxBot>()
+    private val log = Log.of(this)   // runtime class, so subclasses log under their own bot name
 
     val openingBook = OpeningBook("/moveBook/Book.txt")
     var numberOfOpeningMoves = 0
