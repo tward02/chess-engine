@@ -21,6 +21,7 @@ import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.BotPlayer
+import com.tward.engine.player.ClockAware
 import com.tward.engine.tournament.ContenderRecord
 import com.tward.engine.tournament.MultiBotTournament
 import com.tward.engine.tournament.Pairing
@@ -244,10 +245,15 @@ private fun buildDisplayMatch(tournament: MultiBotTournament, pairing: Pairing):
     val white = pairing.white!!
     val black = pairing.black!!
 
+    val whiteBot = white.createBot(Colour.WHITE)
+    val blackBot = black.createBot(Colour.BLACK)
+    (whiteBot as? ClockAware)?.incrementMillis = tournament.incrementTimeMillis
+    (blackBot as? ClockAware)?.incrementMillis = tournament.incrementTimeMillis
+
     return ChessMatch(
         ChessGame(Board.getStartingBoard()),
-        BotPlayer(white.createBot(Colour.WHITE), white.name),
-        BotPlayer(black.createBot(Colour.BLACK), black.name),
-        ClockManager(TimeControl(displayTime, 0))
+        BotPlayer(whiteBot, white.name),
+        BotPlayer(blackBot, black.name),
+        ClockManager(TimeControl(displayTime, tournament.incrementTimeMillis.toLong()))
     )
 }

@@ -4,6 +4,7 @@ import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.game.GameResult
+import com.tward.engine.player.ClockAware
 
 /**
  * Plays a single game between two bot specs to a finished [GameResult]. Fresh bots are built per
@@ -11,17 +12,22 @@ import com.tward.engine.game.GameResult
  *
  * Time handling mirrors the 2-bot [Tournament]: when [initialTimeMillis] > 0 each side is charged
  * its actual thinking time and running to zero is an immediate loss; 0 means untimed (bots get 0
- * and never flag). A game that never resolves within [maxPlies] is adjudicated a draw.
+ * and never flag). [incrementMillis] is a Fischer bonus added after each completed move, and is
+ * announced to [ClockAware] bots so they can budget with it. A game that never resolves within
+ * [maxPlies] is adjudicated a draw.
  */
 internal fun playGame(
     white: BotSpec,
     black: BotSpec,
     maxPlies: Int,
-    initialTimeMillis: Int
+    initialTimeMillis: Int,
+    incrementMillis: Int = 0
 ): GameResult {
 
     val whiteBot = white.createBot(Colour.WHITE)
     val blackBot = black.createBot(Colour.BLACK)
+    (whiteBot as? ClockAware)?.incrementMillis = incrementMillis
+    (blackBot as? ClockAware)?.incrementMillis = incrementMillis
 
     val game = ChessGame(Board.getStartingBoard())
 
@@ -46,9 +52,11 @@ internal fun playGame(
             if (whiteToMove) {
                 whiteTime -= elapsedMs
                 if (whiteTime <= 0) return GameResult.BLACK_TIME_WIN
+                whiteTime += incrementMillis
             } else {
                 blackTime -= elapsedMs
                 if (blackTime <= 0) return GameResult.WHITE_TIME_WIN
+                blackTime += incrementMillis
             }
         }
 

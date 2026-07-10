@@ -19,6 +19,7 @@ import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.BotPlayer
+import com.tward.engine.player.ClockAware
 import com.tward.engine.tournament.Tournament
 import com.tward.ui.model.ChessMatch
 import com.tward.ui.model.ClockManager
@@ -252,10 +253,15 @@ private fun buildDisplayMatch(tournament: Tournament, index: Int): ChessMatch {
     val displayTime = if (tournament.initialTimeMillis > 0) tournament.initialTimeMillis.toLong()
     else DISPLAY_TIME_MILLIS
 
+    val whiteBot = whiteSpec.createBot(Colour.WHITE)
+    val blackBot = blackSpec.createBot(Colour.BLACK)
+    (whiteBot as? ClockAware)?.incrementMillis = tournament.incrementTimeMillis
+    (blackBot as? ClockAware)?.incrementMillis = tournament.incrementTimeMillis
+
     return ChessMatch(
         ChessGame(Board.getStartingBoard()),
-        BotPlayer(whiteSpec.createBot(Colour.WHITE), whiteSpec.name),
-        BotPlayer(blackSpec.createBot(Colour.BLACK), blackSpec.name),
-        ClockManager(TimeControl(displayTime, 0))
+        BotPlayer(whiteBot, whiteSpec.name),
+        BotPlayer(blackBot, blackSpec.name),
+        ClockManager(TimeControl(displayTime, tournament.incrementTimeMillis.toLong()))
     )
 }

@@ -12,7 +12,7 @@ import com.tward.engine.player.ordering.NoOpMoveOrderer
 import com.tward.shared.BotInfo
 
 /** Which search algorithm a bot uses. */
-enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED, ELITE, APEX, NEURAL }
+enum class BotType { RANDOM, MINIMAX, ITERATIVE, NEGAMAX, ADVANCED, ELITE, APEX, NEURAL, TEMPO }
 
 enum class EvaluatorType { BASIC, STANDARD, ADAPTIVE, POSITIONAL, COMPACT, ADVANCED, CONVERSION, NNUE }
 
@@ -120,6 +120,12 @@ object BotCatalog {
             "The apex search with a neural-network evaluation trained on the engine's own games.",
             "Learned", BotType.NEURAL, evaluator = EvaluatorType.NNUE,
             orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
+        ),
+        BotSpec(
+            "tempo-tara", "Tempo Tara", 2500,
+            "The neural bot with grandmaster time management — banks time on easy moves and digs in when the position turns critical.",
+            "Clock-wise", BotType.TEMPO, evaluator = EvaluatorType.NNUE,
+            orderer = OrdererType.COUNTER_MOVE, maxThinkTimeMillis = 4_000
         )
     )
 
@@ -167,6 +173,11 @@ object BotFactory {
         )
 
         BotType.NEURAL -> NeuralNegamaxBot(
+            colour = colour, useOpeningBookMoves = spec.useOpeningBook,
+            maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
+        )
+
+        BotType.TEMPO -> TempoNegamaxBot(
             colour = colour, useOpeningBookMoves = spec.useOpeningBook,
             maxThinkTimeMillis = spec.maxThinkTimeMillis, evaluator = evaluator(spec), moveOrderer = orderer(spec)
         )

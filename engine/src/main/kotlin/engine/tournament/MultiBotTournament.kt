@@ -31,6 +31,7 @@ class MultiBotTournament(
     val concurrency: Int = (Runtime.getRuntime().availableProcessors() - 1).coerceAtLeast(1),
     private val maxPlies: Int = 400,
     val initialTimeMillis: Int = 0,
+    val incrementTimeMillis: Int = 0,
     private val reserveOneForDisplay: Boolean = false
 ) {
 
@@ -105,7 +106,7 @@ class MultiBotTournament(
                         launch(dispatcher) {
                             while (true) {
                                 val pairing = claimInRound() ?: break
-                                recordOutcome(pairing, playGame(pairing.white!!, pairing.black!!, maxPlies, initialTimeMillis))
+                                recordOutcome(pairing, playGame(pairing.white!!, pairing.black!!, maxPlies, initialTimeMillis, incrementTimeMillis))
                             }
                         }
                     }

@@ -82,7 +82,7 @@ open class NegamaxBot(
             return searchRoot(game, fixedDepth, previousBest = null).first
         }
 
-        val thinkTime = chooseThinkTime(timeLeft)
+        val thinkTime = chooseThinkTime(game, timeLeft)
         deadlineNanos = System.nanoTime() + thinkTime * 1_000_000L
         val startNanos = System.nanoTime()
 
@@ -319,8 +319,10 @@ open class NegamaxBot(
         return (nodesSearched and TIME_CHECK_MASK) == 0 && System.nanoTime() >= deadlineNanos
     }
 
-    private fun chooseThinkTime(timeLeft: Int): Int {
-        // Aim to spend ~1/30th of the remaining clock on this move, but never risk flagging.
+    // The millisecond budget for this move, which becomes the search deadline. Overridable so a
+    // subclass can budget smarter (game phase, increment, extending on instability); [game] is the
+    // position about to be searched. Base policy: ~1/30th of the remaining clock, never flagging.
+    protected open fun chooseThinkTime(game: ChessGame, timeLeft: Int): Int {
         var thinkTime = timeLeft / 30.0
         thinkTime = minOf(thinkTime, maxThinkTimeMillis.toDouble())
         thinkTime = minOf(thinkTime, timeLeft * 0.9)

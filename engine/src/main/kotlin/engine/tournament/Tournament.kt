@@ -28,7 +28,8 @@ class Tournament(
     private val maxPlies: Int = 400,
     // Per-side time budget in milliseconds, passed to the bots so time-aware bots (e.g. iterative
     // deepening) know how long they have. 0 means "untimed" — bots are given 0 and never flag.
-    val initialTimeMillis: Int = 0
+    val initialTimeMillis: Int = 0,
+    val incrementTimeMillis: Int = 0
 ) {
 
     private val log = Log.of<Tournament>()
@@ -128,7 +129,7 @@ class Tournament(
 
     private fun playToEnd(index: Int): GameResult {
         val (whiteSpec, blackSpec) = colourAssignment(index)
-        return playGame(whiteSpec, blackSpec, maxPlies, initialTimeMillis)
+        return playGame(whiteSpec, blackSpec, maxPlies, initialTimeMillis, incrementTimeMillis)
     }
 
     private fun isWhiteWin(result: GameResult): Boolean {

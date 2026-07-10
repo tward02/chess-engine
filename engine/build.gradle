@@ -35,7 +35,8 @@ tasks.register('longTest', Test) {
     useJUnitPlatform()
 
     // Lets the A/B harnesses be resized from the command line, e.g. -Pnnue.ab.games=10
-    ['nnue.ab.games', 'nnue.ab.timeMillis', 'nnue.ab.fixedDepth', 'nnue.ab.network'].each { name ->
+    ['nnue.ab.games', 'nnue.ab.timeMillis', 'nnue.ab.fixedDepth', 'nnue.ab.network',
+     'tempo.ab.games', 'tempo.ab.timeMillis', 'tempo.ab.increment'].each { name ->
         def value = providers.gradleProperty(name)
         if (value.present) systemProperty name, value.get()
     }

@@ -4,6 +4,7 @@ import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.ChessBot
+import com.tward.engine.player.ClockAware
 import com.tward.engine.player.bot.MiniMaxIterativeDeepeningBot
 import com.tward.logging.Log
 
@@ -120,6 +121,9 @@ class UciEngine(
 
         val params = parseGoParams(tokens)
         val timeLeft = timeBudgetMillis(params, colour)
+
+        (engineBot as? ClockAware)?.incrementMillis =
+            (if (colour == Colour.WHITE) params["winc"] else params["binc"]) ?: 0
 
         val move = engineBot.chooseMove(game, timeLeft)
         output("bestmove ${UciMoveCodec.encode(move)}")

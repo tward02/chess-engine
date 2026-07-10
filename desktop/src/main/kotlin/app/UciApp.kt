@@ -1,6 +1,8 @@
 package com.tward.app
 
-import com.tward.engine.player.bot.AdvancedNegamaxBot
+import com.tward.engine.player.bot.TempoNegamaxBot
+import com.tward.engine.player.evaluator.NnueEvaluator
+import com.tward.engine.player.evaluator.nnue.NnueNetwork
 import com.tward.logging.LogConfig
 import com.tward.uci.UciEngine
 
@@ -26,7 +28,7 @@ fun main() {
             println(line)
             System.out.flush()
         },
-        botFactory = { colour -> AdvancedNegamaxBot(colour = colour) }
+        botFactory = { colour -> TempoNegamaxBot(colour = colour, evaluator = NnueEvaluator(NnueNetwork.Companion.fromResource("/nnue/default-better.nnue"))) }
     )
 
     generateSequence(::readLine).forEach { line ->

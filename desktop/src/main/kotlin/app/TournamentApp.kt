@@ -7,6 +7,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.tward.engine.player.bot.NeuralNegamaxBot
+import com.tward.engine.player.bot.TempoNegamaxBot
 import com.tward.engine.player.evaluator.NnueEvaluator
 import com.tward.engine.player.evaluator.nnue.NnueNetwork.Companion.fromResource
 import com.tward.engine.tournament.BotSpec
@@ -46,14 +47,14 @@ fun main() = application {
 //            colour = colour,
 //        )
 //    }
-    val specB = BotSpec("Neural Negamax") { colour ->
-        NeuralNegamaxBot(
+    val specB = BotSpec("Neural Negamax Tempo") { colour ->
+        TempoNegamaxBot(
             colour = colour,
-            evaluator = NnueEvaluator()
+            evaluator = NnueEvaluator( fromResource("/nnue/default-better.nnue"))
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 250, initialTimeMillis = 180_000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 60_000, incrementTimeMillis = 1_000)
 
     Window(
         onCloseRequest = ::exitApplication,

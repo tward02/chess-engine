@@ -3,6 +3,7 @@ package uci
 import com.tward.engine.board.Move
 import com.tward.engine.game.ChessGame
 import com.tward.engine.player.ChessBot
+import com.tward.engine.player.ClockAware
 import com.tward.uci.UciEngine
 import com.tward.uci.UciMoveCodec
 import kotlin.test.Test
@@ -19,6 +20,11 @@ class UciEngineTest {
             lastTimeLeft = timeLeft
             return game.getLegalMoves().first()
         }
+    }
+
+    private class ClockAwareFirstMoveBot : ChessBot, ClockAware {
+        override var incrementMillis = -1
+        override fun chooseMove(game: ChessGame, timeLeft: Int): Move = game.getLegalMoves().first()
     }
 
     private fun engineWith(bot: ChessBot, sink: MutableList<String>) =
@@ -62,6 +68,28 @@ class UciEngineTest {
         // First legal move from the start position is generated for a white piece.
         val move = UciMoveCodec.findMove(ChessGame(com.tward.engine.board.Board.getStartingBoard()), bestmove)
         assertTrue(move != null, "bestmove '$bestmove' should be legal from startpos")
+    }
+
+    @Test
+    fun `go forwards the side to move's increment to a clock-aware bot`() {
+        val bot = ClockAwareFirstMoveBot()
+        val engine = engineWith(bot, mutableListOf())
+
+        engine.handle("position startpos")
+        engine.handle("go wtime 60000 btime 60000 winc 2000 binc 3000")
+
+        assertEquals(2000, bot.incrementMillis, "white to move: winc applies")
+    }
+
+    @Test
+    fun `go without increments resets a clock-aware bot to zero`() {
+        val bot = ClockAwareFirstMoveBot()
+        val engine = engineWith(bot, mutableListOf())
+
+        engine.handle("position startpos")
+        engine.handle("go wtime 60000 btime 60000")
+
+        assertEquals(0, bot.incrementMillis)
     }
 
     @Test
