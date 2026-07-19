@@ -12,19 +12,34 @@ class MoveGenerator(private val board: Board) {
 
     fun generateLegalMoves(): List<Move> {
         val pseudoLegalMoves = generatePseudoLegalMoves()
-        val legalMoves = mutableListOf<Move>()
+        val legalMoves = ArrayList<Move>(pseudoLegalMoves.size)
         val myColour = board.activeColour
         val enemyColour = myColour.opposite()
+
+        val kingSquare = board.findKing(myColour)
+        val inCheck = isSquareAttacked(kingSquare, enemyColour)
+        // Out of check, only king moves, en-passant captures and moves of pinned pieces can expose
+        // the king, so everything else is legal without the expensive make/verify/undo round trip.
+        val pinned = if (inCheck) 0L else pinnedMask(kingSquare, myColour)
 
         for (move in pseudoLegalMoves) {
             if (move.isCastling && !isCastlingPathSafe(move, enemyColour)) {
                 continue
             }
 
+            val needsVerification = inCheck ||
+                    move.piece?.type == PieceType.KING ||
+                    (pinned ushr (move.from.row * 8 + move.from.col)) and 1L == 1L ||
+                    isEnPassantCapture(move)
+
+            if (!needsVerification) {
+                legalMoves.add(move)
+                continue
+            }
+
             board.makeMove(move)
 
-            val kingSquare = board.findKing(myColour)
-            if (!isSquareAttacked(kingSquare, enemyColour)) {
+            if (!isSquareAttacked(board.findKing(myColour), enemyColour)) {
                 legalMoves.add(move)
             }
 
@@ -32,6 +47,46 @@ class MoveGenerator(private val board: Board) {
         }
 
         return legalMoves
+    }
+
+    // An en-passant capture is the one capture whose destination square is empty.
+    private fun isEnPassantCapture(move: Move): Boolean =
+        move.piece?.type == PieceType.PAWN && move.capturedPiece != null && board.getPiece(move.to) == null
+
+    /**
+     * Bitmask (square index `row * 8 + col`) of [colour]'s pieces pinned to their king: along each
+     * of the eight rays from the king, the first friendly piece is pinned if the next occupied
+     * square past it holds an enemy slider moving on that ray.
+     */
+    private fun pinnedMask(kingSquare: Square, colour: Colour): Long {
+        var mask = 0L
+        for ((dCol, dRow) in queenOffsets) {
+            val straight = dCol == 0 || dRow == 0
+            var col = kingSquare.col + dCol
+            var row = kingSquare.row + dRow
+            var shieldIndex = -1
+
+            while (col in 0..7 && row in 0..7) {
+                val piece = board.getPiece(Square(col, row))
+                if (piece != null) {
+                    if (shieldIndex < 0) {
+                        if (piece.colour != colour) break   // enemy piece first: no pin on this ray
+                        shieldIndex = row * 8 + col
+                    } else {
+                        if (piece.colour != colour &&
+                            (piece.type == PieceType.QUEEN ||
+                                    piece.type == (if (straight) PieceType.ROOK else PieceType.BISHOP))
+                        ) {
+                            mask = mask or (1L shl shieldIndex)
+                        }
+                        break
+                    }
+                }
+                col += dCol
+                row += dRow
+            }
+        }
+        return mask
     }
 
     fun generatePseudoLegalMoves(): List<Move> {

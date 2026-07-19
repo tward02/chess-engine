@@ -28,7 +28,15 @@ fun main() {
             println(line)
             System.out.flush()
         },
-        botFactory = { colour -> TempoNegamaxBot(colour = colour, evaluator = NnueEvaluator(NnueNetwork.Companion.fromResource("/nnue/default-better.nnue"))) }
+        // One bot per process here, so it can afford a far larger transposition table (4M entries)
+        // than the in-server default.
+        botFactory = { colour ->
+            TempoNegamaxBot(
+                colour = colour,
+                evaluator = NnueEvaluator(NnueNetwork.fromResource("/nnue/default-better.nnue")),
+                transpositionTableBits = 22
+            )
+        }
     )
 
     generateSequence(::readLine).forEach { line ->

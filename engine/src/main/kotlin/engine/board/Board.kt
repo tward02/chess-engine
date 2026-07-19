@@ -11,7 +11,14 @@ class Board {
     // the cache and falls back to a full scan if it is ever stale, so correctness never depends on it.
     private val kingSquares = arrayOfNulls<Square>(2)
 
-    private val stateHistory = ArrayDeque<BoardState>()
+    // Restorable per-move state (castling rights, EP target, clocks) packed into a long each —
+    // makeMove/undoMove run at every search node, so this stays allocation-free.
+    private var stateStack = LongArray(256)
+    private var stateCount = 0
+
+    // XOR of ZobristKeys.pieceKey for every piece on the board, maintained by [setPiece] (the only
+    // grid mutator besides [clearBoard]/[copy], which reset/copy it). Makes [zobristKey] O(1).
+    private var pieceHash = 0L
 
     var activeColour: Colour = Colour.WHITE
     var enPassantTarget: Square? = null
@@ -29,7 +36,27 @@ class Board {
 
     fun getPiece(square: Square): Piece? = grid[square.row][square.col]
 
+    /**
+     * The position's 64-bit Zobrist hash (pieces + side to move + castling rights + en-passant
+     * file), computed in O(1) from the incrementally maintained piece hash. Used as the
+     * transposition-table key and for repetition detection.
+     */
+    val zobristKey: Long
+        get() {
+            var h = pieceHash
+            if (activeColour == Colour.BLACK) h = h xor ZobristKeys.blackToMove
+            if (whiteCanCastleKingside) h = h xor ZobristKeys.castling[0]
+            if (whiteCanCastleQueenside) h = h xor ZobristKeys.castling[1]
+            if (blackCanCastleKingside) h = h xor ZobristKeys.castling[2]
+            if (blackCanCastleQueenside) h = h xor ZobristKeys.castling[3]
+            enPassantTarget?.let { h = h xor ZobristKeys.enPassantFile[it.col] }
+            return h
+        }
+
     fun setPiece(square: Square, piece: Piece?) {
+        val previous = grid[square.row][square.col]
+        if (previous != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(previous, square.col, square.row)
+        if (piece != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(piece, square.col, square.row)
         grid[square.row][square.col] = piece
         // makeMove always writes the king's destination before clearing its origin, so tracking
         // placements here keeps the cache correct through normal moves, castling and FEN setup.
@@ -70,6 +97,7 @@ class Board {
                 grid[r][c] = null
             }
         }
+        pieceHash = 0L
     }
 
     fun copy(): Board {
@@ -89,6 +117,7 @@ class Board {
         board.blackHasCastled = blackHasCastled
         board.halfMoveClock = halfMoveClock
         board.fullMoveNumber = fullMoveNumber
+        board.pieceHash = pieceHash   // the grid writes above bypass setPiece
         return board
     }
 
@@ -110,12 +139,9 @@ class Board {
             if (abs(move.from.row - move.to.row) == 2) {
                 val direction = if (movingPiece.colour == Colour.WHITE) -1 else 1
                 enPassantTarget = Square(move.from.col, move.from.row + direction)
-            } else if (move.capturedPiece != null && move.to == stateHistory.last().enPassantTarget) {
-
-                if (move.to == stateHistory.last().enPassantTarget) {
-                    val capturePawnRow = if (movingPiece.colour == Colour.WHITE) move.to.row + 1 else move.to.row - 1
-                    setPiece(Square(move.to.col, capturePawnRow), null)
-                }
+            } else if (move.capturedPiece != null && move.to == savedEnPassantTarget()) {
+                val capturePawnRow = if (movingPiece.colour == Colour.WHITE) move.to.row + 1 else move.to.row - 1
+                setPiece(Square(move.to.col, capturePawnRow), null)
             }
         } else if (move.isCastling) {
             val row = move.to.row
@@ -297,32 +323,41 @@ class Board {
     }
 
     private fun saveSate() {
-        stateHistory.addLast(
-            BoardState(
-                enPassantTarget,
-                whiteCanCastleKingside,
-                whiteCanCastleQueenside,
-                blackCanCastleKingside,
-                blackCanCastleQueenside,
-                whiteHasCastled,
-                blackHasCastled,
-                halfMoveClock,
-                fullMoveNumber
-            )
-        )
+        var packed = 0L
+        enPassantTarget?.let { packed = packed or 1L or (it.col.toLong() shl 1) or (it.row.toLong() shl 4) }
+        if (whiteCanCastleKingside) packed = packed or (1L shl 7)
+        if (whiteCanCastleQueenside) packed = packed or (1L shl 8)
+        if (blackCanCastleKingside) packed = packed or (1L shl 9)
+        if (blackCanCastleQueenside) packed = packed or (1L shl 10)
+        if (whiteHasCastled) packed = packed or (1L shl 11)
+        if (blackHasCastled) packed = packed or (1L shl 12)
+        packed = packed or (halfMoveClock.toLong() shl 13) or (fullMoveNumber.toLong() shl 29)
+
+        if (stateCount == stateStack.size) stateStack = stateStack.copyOf(stateStack.size * 2)
+        stateStack[stateCount++] = packed
     }
 
     private fun restoreState() {
-        val previousSate = stateHistory.removeLast()
-        enPassantTarget = previousSate.enPassantTarget
-        whiteCanCastleKingside = previousSate.whiteCanCastleKingside
-        whiteCanCastleQueenside = previousSate.whiteCanCastleQueenside
-        blackCanCastleKingside = previousSate.blackCanCastleKingside
-        blackCanCastleQueenside = previousSate.blackCanCastleQueenside
-        whiteHasCastled = previousSate.whiteHasCastled
-        blackHasCastled = previousSate.blackHasCastled
-        halfMoveClock = previousSate.halfMoveClock
-        fullMoveNumber = previousSate.fullMoveNumber
+        val packed = stateStack[--stateCount]
+        enPassantTarget = if (packed and 1L != 0L) {
+            Square(((packed shr 1) and 0x7L).toInt(), ((packed shr 4) and 0x7L).toInt())
+        } else {
+            null
+        }
+        whiteCanCastleKingside = packed and (1L shl 7) != 0L
+        whiteCanCastleQueenside = packed and (1L shl 8) != 0L
+        blackCanCastleKingside = packed and (1L shl 9) != 0L
+        blackCanCastleQueenside = packed and (1L shl 10) != 0L
+        whiteHasCastled = packed and (1L shl 11) != 0L
+        blackHasCastled = packed and (1L shl 12) != 0L
+        halfMoveClock = ((packed shr 13) and 0xFFFFL).toInt()
+        fullMoveNumber = (packed shr 29).toInt()
+    }
+
+    private fun savedEnPassantTarget(): Square? {
+        val packed = stateStack[stateCount - 1]
+        if (packed and 1L == 0L) return null
+        return Square(((packed shr 1) and 0x7L).toInt(), ((packed shr 4) and 0x7L).toInt())
     }
 
     companion object {
@@ -440,15 +475,3 @@ class Board {
         }
     }
 }
-
-data class BoardState(
-    val enPassantTarget: Square? = null,
-    var whiteCanCastleKingside: Boolean,
-    var whiteCanCastleQueenside: Boolean,
-    var blackCanCastleKingside: Boolean,
-    var blackCanCastleQueenside: Boolean,
-    var whiteHasCastled: Boolean,
-    var blackHasCastled: Boolean,
-    var halfMoveClock: Int,
-    var fullMoveNumber: Int
-)

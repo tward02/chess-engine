@@ -9,7 +9,11 @@ class ChessGame(val board: Board) {
 
     var result: GameResult? = null
 
-    private var positionHistory = mutableListOf<String>()
+    // Zobrist hash of the position after each move, as an unboxed stack. Hash equality stands in
+    // for the FEN equality the repetition rule wants: the key covers exactly the fields a
+    // clock-less FEN prints (pieces, side to move, castling rights, en-passant file).
+    private var positionHistory = LongArray(256)
+    private var positionCount = 0
 
     fun getLegalMoves(): List<Move> {
         return MoveGenerator(board).generateLegalMoves()
@@ -21,12 +25,15 @@ class ChessGame(val board: Board) {
         }
         board.makeMove(move)
 
-        positionHistory.add(board.toFEN(isFullFEN = false))
+        if (positionCount == positionHistory.size) {
+            positionHistory = positionHistory.copyOf(positionHistory.size * 2)
+        }
+        positionHistory[positionCount++] = board.zobristKey
     }
 
     fun undoMove(move: Move) {
         board.undoMove(move)
-        positionHistory.removeLast()
+        positionCount--
     }
 
     fun getGameResult(): GameResult? {
@@ -63,28 +70,35 @@ class ChessGame(val board: Board) {
     }
 
     fun isInsufficientMaterial(): Boolean {
-        val pieces = board.getPieces()
+        // Allocation-free scan — this runs at every search node. Draws: K vs K, K vs K+minor, and
+        // KB vs KB with both bishops on the same square colour.
+        var nonKings = 0
+        var minors = 0
+        var whiteBishops = 0
+        var blackBishops = 0
+        var bishopSquareParitySum = 0
 
-        val nonKings = pieces.filter { it.type != PieceType.KING }
-
-        if (nonKings.isEmpty()) {
-            return true
-        }
-
-        if (nonKings.size == 1 && (nonKings[0].type == PieceType.BISHOP || nonKings[0].type == PieceType.KNIGHT)) {
-            return true
-        }
-
-        if (nonKings.size == 2 && nonKings.all { it.type == PieceType.BISHOP } && nonKings[0].colour != nonKings[1].colour) {
-            val piece1Location = board.findPiece(nonKings[0])
-            val piece2Location = board.findPiece(nonKings[1])
-
-            if (piece1Location != null && piece2Location != null && piece1Location.getSquareType() == piece2Location.getSquareType()) {
-                return true
+        board.forEachPiece { col, row, piece ->
+            when (piece.type) {
+                PieceType.KING -> {}
+                PieceType.BISHOP -> {
+                    nonKings++
+                    minors++
+                    if (piece.colour == Colour.WHITE) whiteBishops++ else blackBishops++
+                    bishopSquareParitySum += (col + row) and 1
+                }
+                PieceType.KNIGHT -> {
+                    nonKings++
+                    minors++
+                }
+                else -> nonKings++
             }
         }
 
-        return false
+        if (nonKings == 0) return true
+        if (nonKings == 1 && minors == 1) return true
+        // Opposite-coloured armies of one bishop each, on same-coloured squares (parity sum 0 or 2).
+        return nonKings == 2 && whiteBishops == 1 && blackBishops == 1 && bishopSquareParitySum != 1
     }
 
     fun isInCheck(colour: Colour): Boolean {
@@ -97,11 +111,31 @@ class ChessGame(val board: Board) {
     }
 
     fun isThreefoldRepetition(): Boolean {
-        val current = board.toFEN(isFullFEN = false)
+        val current = board.zobristKey
+        var occurrences = 0
+        for (i in 0 until positionCount) {
+            if (positionHistory[i] == current) occurrences++
+        }
+        return occurrences >= 3
+    }
 
-        return positionHistory.count {
-            it == current
-        } >= 3
+    /**
+     * Whether the current position has occurred at least once before in the game (a twofold
+     * repetition). Search code treats this as a draw score: if the opponent allowed the position
+     * once already, the full threefold claim is available on demand. Only the last
+     * [Board.halfMoveClock] plies can repeat (any capture or pawn move is irreversible), and equal
+     * positions must have the same side to move, so the scan is short and strides by two.
+     */
+    fun isRepetition(): Boolean {
+        if (positionCount < 3) return false
+        val current = positionHistory[positionCount - 1]
+        val oldest = maxOf(0, positionCount - 1 - board.halfMoveClock)
+        var i = positionCount - 3
+        while (i >= oldest) {
+            if (positionHistory[i] == current) return true
+            i -= 2
+        }
+        return false
     }
 
     fun isGameOver(): Boolean {
@@ -121,7 +155,8 @@ class ChessGame(val board: Board) {
 
     fun copy(): ChessGame {
         val game = ChessGame(board.copy())
-        game.positionHistory = positionHistory.toMutableList()
+        game.positionHistory = positionHistory.copyOf()
+        game.positionCount = positionCount
         game.result = result
         return game
     }
