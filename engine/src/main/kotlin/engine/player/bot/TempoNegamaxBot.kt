@@ -113,7 +113,7 @@ open class TempoNegamaxBot(
 
         val result = super.searchToDepth(game, depth, previousBest, previousScore)
 
-        if (smartSearchActive && !searchAborted) {
+        if (smartSearchActive && !pondering && !searchAborted) {
             if (depth >= CONTROL_MIN_DEPTH) {
                 val changed = result.first != lastBest
                 val dropped = lastScore - result.second >= SCORE_DROP_CP

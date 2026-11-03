@@ -67,6 +67,11 @@ open class AdvancedNegamaxBot(
     private val ttFlag = ByteArray(ttSize)
     private val ttBestMove = arrayOfNulls<Move>(ttSize)
 
+    override fun hashMove(key: Long): Move? {
+        val index = (key and ttIndexMask).toInt()
+        return if (ttKey[index] == key) ttBestMove[index] else null
+    }
+
     override fun negamax(game: ChessGame, depth: Int, alpha: Int, beta: Int, ply: Int): Int {
         nodesSearched++
 

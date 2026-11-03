@@ -6,6 +6,7 @@ import com.tward.engine.board.PieceType
 import com.tward.engine.game.ChessGame
 import com.tward.engine.openingBook.OpeningBook
 import com.tward.engine.player.ChessBot
+import com.tward.engine.player.Ponderable
 import com.tward.engine.player.evaluator.CompactEvaluator
 import com.tward.engine.player.evaluator.Evaluator
 import com.tward.engine.player.ordering.KillerHistoryMoveOrderer
@@ -47,7 +48,7 @@ open class NegamaxBot(
     private val maxThinkTimeMillis: Int = 20_000,
     protected val evaluator: Evaluator = CompactEvaluator(),
     protected val moveOrderer: MoveOrderer = KillerHistoryMoveOrderer()
-) : ChessBot {
+) : ChessBot, Ponderable {
 
     private val log = Log.of(this)   // runtime class, so subclasses log under their own bot name
 
@@ -64,6 +65,58 @@ open class NegamaxBot(
     // early by pulling the deadline forward). Base behaviour is unchanged.
     protected var deadlineNanos = Long.MAX_VALUE
     protected var searchAborted = false
+
+    // Set only while pondering: an untimed search that subclasses' time controls must leave alone,
+    // stopped by the driver through [externalStop].
+    protected var pondering = false
+        private set
+    private var externalStop: (() -> Boolean)? = null
+
+    override fun ponder(game: ChessGame, stopRequested: () -> Boolean) {
+        if (game.getLegalMoves().isEmpty()) return
+
+        nodesSearched = 0
+        searchAborted = false
+        moveOrderer.reset()
+        deadlineNanos = Long.MAX_VALUE
+        externalStop = stopRequested
+        pondering = true
+        val startNanos = System.nanoTime()
+        var depthReached = 0
+        try {
+            var previousBest: Move? = null
+            var score = 0
+            for (depth in 1..maxDepth) {
+                val (move, s) = searchToDepth(game, depth, previousBest, score)
+                if (searchAborted) break
+                previousBest = move
+                score = s
+                depthReached = depth
+                if (abs(s) >= MATE - MAX_PLY) break
+            }
+        } finally {
+            externalStop = null
+            pondering = false
+        }
+        log.debug {
+            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+            "$colour pondered depth=$depthReached nodes=$nodesSearched in ${elapsedMs}ms"
+        }
+    }
+
+    override fun expectedReply(game: ChessGame, move: Move): Move? {
+        game.makeMove(move)
+        try {
+            val reply = hashMove(Zobrist.hash(game.board)) ?: return null
+            // The table can hold a colliding or stale entry; only a legal move is a usable guess.
+            return game.getLegalMoves().firstOrNull { it == reply }
+        } finally {
+            game.undoMove(move)
+        }
+    }
+
+    /** The transposition table's best move for [key], for bots that keep one. */
+    protected open fun hashMove(key: Long): Move? = null
 
     override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
         val legalMoves = game.getLegalMoves()
@@ -315,8 +368,10 @@ open class NegamaxBot(
     }
 
     protected fun timeUp(): Boolean {
+        if ((nodesSearched and TIME_CHECK_MASK) != 0) return false
+        externalStop?.let { if (it()) return true }
         if (fixedDepth != null) return false
-        return (nodesSearched and TIME_CHECK_MASK) == 0 && System.nanoTime() >= deadlineNanos
+        return System.nanoTime() >= deadlineNanos
     }
 
     // The millisecond budget for this move, which becomes the search deadline. Overridable so a

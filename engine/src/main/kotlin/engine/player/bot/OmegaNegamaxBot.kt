@@ -98,6 +98,11 @@ open class OmegaNegamaxBot(
     private val ttFlag = ByteArray(ttSize)
     private val ttGeneration = ByteArray(ttSize)
     private val ttBestMove = arrayOfNulls<Move>(ttSize)
+
+    override fun hashMove(key: Long): Move? {
+        val index = (key and ttIndexMask).toInt()
+        return if (ttKey[index] == key) ttBestMove[index] else null
+    }
     private var generation = 0
 
     // lmrTable[depth][moveIndex]; both axes clamped to 63
