@@ -119,10 +119,12 @@ if ($sshKey -ne '') {
 $login = "$vmUser@$target"
 $remoteTmp = "/tmp/chess-engine-deploy-$PID"
 
+# Each scp/ssh call is a separate login (one password prompt each with password auth), so the
+# deploy uses exactly two: one upload and one remote command that does everything else.
 # The script is CR-stripped on the VM in case it was saved with Windows line endings. -t gives
 # sudo a terminal to prompt on, should the engine dir not be writable by VM_USER.
-function Invoke-Remote([string]$scriptArgs, [string]$extraCleanup) {
-    $command = "tr -d '\r' < $remoteTmp.sh > $remoteTmp.run && bash $remoteTmp.run $scriptArgs; " +
+function Invoke-Remote([string]$scriptArgs, [string]$extraCleanup, [string]$prepare = '') {
+    $command = "$prepare" + "tr -d '\r' < $remoteTmp.sh > $remoteTmp.run && bash $remoteTmp.run $scriptArgs; " +
                "s=`$?; rm -f $remoteTmp.sh $remoteTmp.run $extraCleanup; exit `$s"
     Invoke-Native 'ssh' ($sshOpts + @('-t', $login, $command))
 }
@@ -139,10 +141,11 @@ $sha = (Get-FileHash $jar -Algorithm SHA256).Hash.ToLower()
 $sizeMb = [math]::Round((Get-Item $jar).Length / 1MB, 1)
 Write-Host "==> Uploading uci-engine.jar ($sizeMb MB, sha256 $sha)" -ForegroundColor Cyan
 Invoke-Native 'scp' ($scpOpts + @($jar, $remoteScript, "${login}:/tmp/"))
-Invoke-Native 'ssh' ($sshOpts + @($login, "mv /tmp/uci-engine.jar $remoteTmp.jar && mv /tmp/remote-install-engine.sh $remoteTmp.sh"))
 
 Write-Host '==> Installing on the VM' -ForegroundColor Cyan
-Invoke-Remote "install $remoteTmp.jar $sha '$engineDir' '$engineName' $keepBackups" "$remoteTmp.jar"
+# The uploads are moved to per-deploy names first, in the same login as the install.
+$prepare = "mv /tmp/uci-engine.jar $remoteTmp.jar && mv /tmp/remote-install-engine.sh $remoteTmp.sh && "
+Invoke-Remote "install $remoteTmp.jar $sha '$engineDir' '$engineName' $keepBackups" "$remoteTmp.jar" $prepare
 
 Write-Host '==> Deployed. Watch the next game pick it up with:' -ForegroundColor Green
 Write-Host "    ssh $login journalctl -fu lichess-bot"

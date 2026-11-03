@@ -74,6 +74,8 @@ uploads it to the first reachable host in `VM_HOSTS`, checks the checksum and th
 the VM, backs up the live jar and swaps the new one in with an atomic rename. lichess-bot starts a
 fresh engine per game, so the current game finishes on the old jar and the next one uses the new
 jar. Flags: `-SkipTests`, `-SkipBuild`, `-Rollback` (restores the latest backup).
+With password login (`SSH_KEY` empty) you're asked for `VM_USER`'s password twice: once for the
+upload, once for the install. If the engine folder isn't writable by `VM_USER`, sudo asks a third time.
 
 To update the monitor, re-copy its folder and `sudo systemctl restart chess-monitor`.
 Files copied from Windows lose their execute bit, and lichess-bot refuses to start an engine

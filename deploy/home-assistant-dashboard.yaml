@@ -1,0 +1,826 @@
+# Home Assistant dashboard for the chess bot, styled like the Home Energy dashboard (same
+# background, card-mod glass styles, Mushroom + ApexCharts cards). Generated; edit freely.
+#
+# Combines the monitor's MQTT entities (sensor.chess_bot_tward_bot_*) with the official Lichess
+# integration (sensor.tward_bot_*_games).
+#
+# Needs (HACS): Mushroom, card-mod, ApexCharts card. All three are already used by Home Energy.
+#
+# Install: Settings -> Dashboards -> Add dashboard -> "New dashboard from scratch" -> open it ->
+# pencil -> three dots -> Raw configuration editor -> replace everything with this file -> Save.
+#
+# The live board loads from 192.168.50.5 when person.tyler is home and from the Tailscale address
+# 100.113.229.8 when away. Before pasting, find/replace if different:
+#   person.tyler          -> your person entity (Settings -> People; its location comes from the phone app)
+#   sensor.tward_bot_     -> the Lichess integration's prefix (check its device page)
+
+title: Chess Bot
+views:
+  - title: Overview
+    path: overview
+    icon: mdi:chess-king
+    type: sections
+    max_columns: 3
+    dense_section_placement: true
+    background: >-
+      radial-gradient(circle at 12% 8%, rgba(56,189,248,0.20), transparent 38%), radial-gradient(circle
+      at 88% 92%, rgba(249,115,22,0.16), transparent 42%), linear-gradient(160deg, #070b14 0%, #0d1424
+      55%, #111827 100%) fixed
+    sections:
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:mushroom-template-card
+            entity: sensor.chess_bot_tward_bot_state
+            primary: >-
+              {% set s = states('sensor.chess_bot_tward_bot_state') %}{{ {'playing':'Playing ' ~ states('sensor.chess_bot_tward_bot_current_opponent'),'idle':'Waiting
+              for a challenge','offline':'Offline','down':'Bot is down','starting':'Starting up'}.get(s,
+              'tward-bot') }}
+            secondary: >-
+              {% set g = states('sensor.chess_bot_tward_bot_games_today') | int(0) %}{% set w = states('sensor.chess_bot_tward_bot_wins_today')
+              | int(0) %}{% set d = states('sensor.chess_bot_tward_bot_draws_today') | int(0) %}{% set
+              delta = states('sensor.chess_bot_tward_bot_rating_change_today') | int(0) %}tward-bot ·
+              blitz {{ states('sensor.chess_bot_tward_bot_blitz_rating') }} · {{ '%+d' | format(delta)
+              }} today · {{ g }} game{{ '' if g == 1 else 's' }}{% if g > 0 %} · {{ ((w + 0.5 * d) / g
+              * 100) | round(0) | int }}% score{% endif %}
+            icon: >-
+              {% set s = states('sensor.chess_bot_tward_bot_state') %}{{ {'playing':'mdi:sword-cross','idle':'mdi:chess-king','offline':'mdi:lan-disconnect','down':'mdi:robot-dead-outline'}.get(s,
+              'mdi:chess-king') }}
+            icon_color: >-
+              {% set s = states('sensor.chess_bot_tward_bot_state') %}{{ {'playing':'green','idle':'light-blue','offline':'orange','down':'red'}.get(s,
+              'blue-grey') }}
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #94a3b8;
+                  --card-primary-font-size: 30px;
+                  --card-primary-font-weight: 800;
+                  --card-primary-letter-spacing: -0.5px;
+                  --card-secondary-font-size: 15px;
+                  --icon-size: 56px;
+                  background: none;
+                  border: none;
+                  box-shadow: none;
+                  padding: 8px 4px;
+                }
+          - type: custom:mushroom-chips-card
+            alignment: start
+            grid_options:
+              columns: full
+            chips:
+              - type: template
+                entity: binary_sensor.chess_bot_tward_bot_process_running
+                icon: mdi:cog
+                icon_color: >-
+                  {{ 'green' if is_state('binary_sensor.chess_bot_tward_bot_process_running', 'on') else
+                  'red' }}
+                content: >-
+                  Process {{ 'up' if is_state('binary_sensor.chess_bot_tward_bot_process_running', 'on')
+                  else 'down' }}
+                tap_action:
+                  action: more-info
+              - type: template
+                entity: binary_sensor.chess_bot_tward_bot_lichess_online
+                icon: mdi:web
+                icon_color: >-
+                  {{ 'green' if is_state('binary_sensor.chess_bot_tward_bot_lichess_online', 'on') else
+                  'red' }}
+                content: >-
+                  Lichess {{ 'online' if is_state('binary_sensor.chess_bot_tward_bot_lichess_online',
+                  'on') else 'offline' }}
+                tap_action:
+                  action: more-info
+              - type: template
+                entity: sensor.chess_bot_tward_bot_bullet_rating
+                icon: mdi:bullet
+                icon_color: deep-orange
+                content: Bullet {{ states('sensor.chess_bot_tward_bot_bullet_rating') }}
+                tap_action:
+                  action: more-info
+              - type: template
+                entity: sensor.chess_bot_tward_bot_blitz_rating
+                icon: mdi:lightning-bolt
+                icon_color: cyan
+                content: Blitz {{ states('sensor.chess_bot_tward_bot_blitz_rating') }}
+                tap_action:
+                  action: more-info
+              - type: template
+                entity: sensor.chess_bot_tward_bot_last_result
+                icon: mdi:flag-checkered
+                icon_color: >-
+                  {% set r = states('sensor.chess_bot_tward_bot_last_result') %}{{ 'green' if r.startswith('Won')
+                  else 'red' if r.startswith('Lost') else 'blue-grey' }}
+                content: '{{ states(''sensor.chess_bot_tward_bot_last_result'') }}'
+                tap_action:
+                  action: more-info
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #e2e8f0;
+                  --chip-background: rgba(255,255,255,0.07);
+                  --chip-border-width: 1px;
+                  --chip-border-color: rgba(255,255,255,0.08);
+                  --chip-border-radius: 20px;
+                  --chip-height: 40px;
+                  --chip-padding: 0 14px;
+                  --chip-font-size: 14px;
+                  --chip-icon-size: 18px;
+                  --chip-box-shadow: none;
+                  backdrop-filter: blur(14px);
+                }
+          - type: custom:mushroom-template-card
+            primary: Watch live game
+            secondary: >-
+              vs {{ states('sensor.chess_bot_tward_bot_current_opponent') }} · opens Lichess TV
+            icon: mdi:television-play
+            icon_color: red
+            tap_action:
+              action: url
+              url_path: https://lichess.org/@/tward-bot/tv
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #94a3b8;
+                  --card-primary-font-size: 16px;
+                  --card-primary-font-weight: 700;
+                  --card-secondary-font-size: 12px;
+                  background: rgba(255,255,255,0.04);
+                  backdrop-filter: blur(20px);
+                  -webkit-backdrop-filter: blur(20px);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 20px;
+                  box-shadow: none;
+                }
+            grid_options:
+              columns: full
+            visibility:
+              - condition: state
+                entity: binary_sensor.chess_bot_tward_bot_in_game
+                state: 'on'
+      - type: grid
+        column_span: 2
+        visibility:
+          - condition: state
+            entity: binary_sensor.chess_bot_tward_bot_in_game
+            state: 'on'
+        cards:
+          - type: custom:mushroom-title-card
+            title: Live game
+            subtitle: Board, clocks and eval from the monitor
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: iframe
+            url: http://192.168.50.5:8090/
+            aspect_ratio: 110%
+            grid_options:
+              columns: full
+            visibility:
+              - condition: state
+                entity: person.tyler
+                state: home
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                  overflow: hidden;
+                }
+          - type: iframe
+            url: http://100.113.229.8:8090/
+            aspect_ratio: 110%
+            grid_options:
+              columns: full
+            visibility:
+              - condition: state
+                entity: person.tyler
+                state_not: home
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                  overflow: hidden;
+                }
+      - type: grid
+        column_span: 1
+        visibility:
+          - condition: state
+            entity: binary_sensor.chess_bot_tward_bot_in_game
+            state: 'on'
+        cards:
+          - type: custom:mushroom-title-card
+            title: Position
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: custom:mushroom-template-card
+            entity: sensor.chess_bot_tward_bot_current_opponent
+            primary: '{{ states(''sensor.chess_bot_tward_bot_current_opponent'') }}'
+            secondary: Opponent
+            icon: mdi:account-tie
+            icon_color: deep-purple
+            layout: vertical
+            tap_action:
+              action: more-info
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #94a3b8;
+                  --card-primary-font-size: 22px;
+                  --card-primary-font-weight: 700;
+                  --card-secondary-font-size: 13px;
+                  --icon-size: 46px;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+          - type: gauge
+            entity: sensor.chess_bot_tward_bot_current_eval
+            name: Eval · bot's side
+            min: -600
+            max: 600
+            needle: true
+            severity:
+              red: -600
+              yellow: -150
+              green: 150
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+          - type: custom:mushroom-template-card
+            entity: sensor.chess_bot_tward_bot_current_eval
+            primary: >-
+              {% set cp = states('sensor.chess_bot_tward_bot_current_eval') | int(0) %}{{ '%+.1f' | format(cp
+              / 100) }}
+            secondary: >-
+              {% set cp = states('sensor.chess_bot_tward_bot_current_eval') | int(0) %}{{ 'Winning' if
+              cp > 300 else 'Better' if cp > 80 else 'Losing' if cp < -300 else 'Worse' if cp < -80 else
+              'Level' }}
+            icon: mdi:scale-balance
+            icon_color: >-
+              {% set cp = states('sensor.chess_bot_tward_bot_current_eval') | int(0) %}{{ 'green' if cp
+              > 80 else 'red' if cp < -80 else 'blue-grey' }}
+            tap_action:
+              action: more-info
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #94a3b8;
+                  --card-primary-font-size: 16px;
+                  --card-primary-font-weight: 700;
+                  --card-secondary-font-size: 12px;
+                  background: rgba(255,255,255,0.04);
+                  backdrop-filter: blur(20px);
+                  -webkit-backdrop-filter: blur(20px);
+                  border: 1px solid rgba(255,255,255,0.06);
+                  border-radius: 20px;
+                  box-shadow: none;
+                }
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:mushroom-title-card
+            title: Today
+            subtitle: Results since midnight
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: grid
+            columns: 4
+            square: false
+            grid_options:
+              columns: full
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_wins_today
+                primary: '{{ states(''sensor.chess_bot_tward_bot_wins_today'') | int(0) }}'
+                secondary: Wins
+                icon: mdi:trophy
+                icon_color: green
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_draws_today
+                primary: '{{ states(''sensor.chess_bot_tward_bot_draws_today'') | int(0) }}'
+                secondary: Draws
+                icon: mdi:handshake
+                icon_color: blue-grey
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_losses_today
+                primary: '{{ states(''sensor.chess_bot_tward_bot_losses_today'') | int(0) }}'
+                secondary: Losses
+                icon: mdi:close-circle
+                icon_color: red
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_rating_change_today
+                primary: >-
+                  {{ '%+d' | format(states('sensor.chess_bot_tward_bot_rating_change_today') | int(0))
+                  }}
+                secondary: Rating change
+                icon: mdi:delta
+                icon_color: >-
+                  {% set d = states('sensor.chess_bot_tward_bot_rating_change_today') | int(0) %}{{ 'green'
+                  if d > 0 else 'red' if d < 0 else 'blue-grey' }}
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+      - type: grid
+        column_span: 3
+        cards:
+          - type: custom:mushroom-title-card
+            title: Ratings
+            subtitle: Live from the monitor · games played from the Lichess integration
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: grid
+            columns: 4
+            square: false
+            grid_options:
+              columns: full
+            cards:
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_bullet_rating
+                primary: '{{ states(''sensor.chess_bot_tward_bot_bullet_rating'') }}'
+                secondary: Bullet · {{ states('sensor.tward_bot_bullet_games') | int(0) }} games
+                icon: mdi:bullet
+                icon_color: deep-orange
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_blitz_rating
+                primary: '{{ states(''sensor.chess_bot_tward_bot_blitz_rating'') }}'
+                secondary: Blitz · {{ states('sensor.tward_bot_blitz_games') | int(0) }} games
+                icon: mdi:lightning-bolt
+                icon_color: cyan
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_rapid_rating
+                primary: '{{ states(''sensor.chess_bot_tward_bot_rapid_rating'') }}'
+                secondary: Rapid · {{ states('sensor.tward_bot_rapid_games') | int(0) }} games
+                icon: mdi:timer-sand
+                icon_color: light-green
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+              - type: custom:mushroom-template-card
+                entity: sensor.chess_bot_tward_bot_classical_rating
+                primary: '{{ states(''sensor.chess_bot_tward_bot_classical_rating'') }}'
+                secondary: >-
+                  Classical · {{ states('sensor.tward_bot_classical_games') | int(0) }} games
+                icon: mdi:chess-rook
+                icon_color: purple
+                layout: vertical
+                tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      --primary-text-color: #f8fafc;
+                      --secondary-text-color: #94a3b8;
+                      --card-primary-font-size: 22px;
+                      --card-primary-font-weight: 700;
+                      --card-secondary-font-size: 13px;
+                      --icon-size: 46px;
+                      background: rgba(255,255,255,0.05);
+                      backdrop-filter: blur(20px) saturate(140%);
+                      -webkit-backdrop-filter: blur(20px) saturate(140%);
+                      border: 1px solid rgba(255,255,255,0.08);
+                      border-radius: 24px;
+                      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    }
+          - type: custom:apexcharts-card
+            grid_options:
+              columns: full
+            graph_span: 48h
+            header:
+              show: true
+              title: Rating · last 48 hours
+            apex_config:
+              chart:
+                height: 250
+                foreColor: '#94a3b8'
+                toolbar:
+                  show: false
+              grid:
+                borderColor: rgba(255,255,255,0.06)
+                strokeDashArray: 4
+              stroke:
+                curve: smooth
+                width: 3
+              legend:
+                show: true
+                position: top
+                horizontalAlign: right
+              dataLabels:
+                enabled: false
+              tooltip:
+                theme: dark
+              yaxis:
+                forceNiceScale: true
+                decimalsInFloat: 0
+            series:
+              - entity: sensor.chess_bot_tward_bot_bullet_rating
+                name: Bullet
+                type: line
+                color: '#fb923c'
+                group_by:
+                  func: last
+                  duration: 30min
+                  fill: last
+              - entity: sensor.chess_bot_tward_bot_blitz_rating
+                name: Blitz
+                type: line
+                color: '#22d3ee'
+                group_by:
+                  func: last
+                  duration: 30min
+                  fill: last
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+          - type: custom:apexcharts-card
+            grid_options:
+              columns: full
+            graph_span: 30d
+            header:
+              show: true
+              title: Rating · last 30 days
+            apex_config:
+              chart:
+                height: 250
+                foreColor: '#94a3b8'
+                toolbar:
+                  show: false
+              grid:
+                borderColor: rgba(255,255,255,0.06)
+                strokeDashArray: 4
+              stroke:
+                curve: smooth
+                width: 3
+              legend:
+                show: true
+                position: top
+                horizontalAlign: right
+              dataLabels:
+                enabled: false
+              tooltip:
+                theme: dark
+              yaxis:
+                forceNiceScale: true
+                decimalsInFloat: 0
+            series:
+              - entity: sensor.chess_bot_tward_bot_bullet_rating
+                name: Bullet
+                type: line
+                color: '#fb923c'
+                statistics:
+                  type: mean
+                  period: day
+                  align: start
+              - entity: sensor.chess_bot_tward_bot_blitz_rating
+                name: Blitz
+                type: line
+                color: '#22d3ee'
+                statistics:
+                  type: mean
+                  period: day
+                  align: start
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+            span:
+              end: day
+      - type: grid
+        column_span: 1
+        cards:
+          - type: custom:mushroom-title-card
+            title: Results feed
+            subtitle: Last 3 days
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: logbook
+            entities:
+              - sensor.chess_bot_tward_bot_last_result
+            hours_to_show: 72
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:mushroom-title-card
+            title: Uptime
+            subtitle: Last 24 hours
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f8fafc;
+                  --secondary-text-color: #64748b;
+                  --title-font-size: 22px;
+                  --title-font-weight: 700;
+                }
+          - type: history-graph
+            hours_to_show: 24
+            grid_options:
+              columns: full
+            card_mod:
+              style: |
+                ha-card {
+                  --primary-text-color: #f1f5f9;
+                  --secondary-text-color: #94a3b8;
+                  background: rgba(255,255,255,0.05);
+                  backdrop-filter: blur(20px) saturate(140%);
+                  -webkit-backdrop-filter: blur(20px) saturate(140%);
+                  border: 1px solid rgba(255,255,255,0.08);
+                  border-radius: 24px;
+                  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                }
+            entities:
+              - entity: sensor.chess_bot_tward_bot_state
+                name: State
+              - entity: binary_sensor.chess_bot_tward_bot_process_running
+                name: Process
+              - entity: binary_sensor.chess_bot_tward_bot_lichess_online
+                name: Lichess
+              - entity: binary_sensor.chess_bot_tward_bot_in_game
+                name: In game
+  - title: Live board
+    path: live
+    icon: mdi:checkerboard
+    type: panel
+    background: >-
+      radial-gradient(circle at 12% 8%, rgba(56,189,248,0.20), transparent 38%), radial-gradient(circle
+      at 88% 92%, rgba(249,115,22,0.16), transparent 42%), linear-gradient(160deg, #070b14 0%, #0d1424
+      55%, #111827 100%) fixed
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: person.tyler
+                state: home
+            card:
+              type: iframe
+              url: http://192.168.50.5:8090/
+              aspect_ratio: 75%
+              card_mod:
+                style: |
+                  ha-card {
+                    --primary-text-color: #f1f5f9;
+                    --secondary-text-color: #94a3b8;
+                    background: rgba(255,255,255,0.05);
+                    backdrop-filter: blur(20px) saturate(140%);
+                    -webkit-backdrop-filter: blur(20px) saturate(140%);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 24px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    overflow: hidden;
+                  }
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: person.tyler
+                state_not: home
+            card:
+              type: iframe
+              url: http://100.113.229.8:8090/
+              aspect_ratio: 75%
+              card_mod:
+                style: |
+                  ha-card {
+                    --primary-text-color: #f1f5f9;
+                    --secondary-text-color: #94a3b8;
+                    background: rgba(255,255,255,0.05);
+                    backdrop-filter: blur(20px) saturate(140%);
+                    -webkit-backdrop-filter: blur(20px) saturate(140%);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 24px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                    overflow: hidden;
+                  }
