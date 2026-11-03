@@ -118,25 +118,48 @@ open class NegamaxBot(
     /** The transposition table's best move for [key], for bots that keep one. */
     protected open fun hashMove(key: Long): Move? = null
 
+    /**
+     * When set, [chooseMove] ignores the clock and searches iteratively until about this many nodes
+     * have been searched, then plays the deepest completed iteration's move. At least one iteration
+     * always completes. Deterministic, so labelling runs are reproducible and every position gets a
+     * comparable effort (which a fixed depth does not). [fixedDepth] takes precedence.
+     */
+    var nodeLimit: Int = NO_NODE_LIMIT
+    private var nodeLimitArmed = false
+
+    /** Root score (side to move, centipawns) of the last search's deepest completed iteration. */
+    var lastSearchScore = 0
+        private set
+
+    /** The move [lastSearchScore] belongs to; null when the last move came from the opening book. */
+    var lastSearchMove: Move? = null
+        private set
+
     override fun chooseMove(game: ChessGame, timeLeft: Int): Move {
         val legalMoves = game.getLegalMoves()
         require(legalMoves.isNotEmpty()) { "chooseMove called on a finished position ($colour to move)" }
 
+        lastSearchMove = null
         if (useOpeningBookMoves && numberOfOpeningMoves < maxBookMoves) {
             getBookMove(game, legalMoves)?.let { return it }
         }
 
         nodesSearched = 0
         searchAborted = false
+        nodeLimitArmed = false
         moveOrderer.reset()
 
         if (fixedDepth != null) {
             deadlineNanos = Long.MAX_VALUE
-            return searchRoot(game, fixedDepth, previousBest = null).first
+            val (move, score) = searchRoot(game, fixedDepth, previousBest = null)
+            lastSearchMove = move
+            lastSearchScore = score
+            return move
         }
 
-        val thinkTime = chooseThinkTime(game, timeLeft)
-        deadlineNanos = System.nanoTime() + thinkTime * 1_000_000L
+        val nodeBudgeted = nodeLimit != NO_NODE_LIMIT
+        val thinkTime = if (nodeBudgeted) 0 else chooseThinkTime(game, timeLeft)
+        deadlineNanos = if (nodeBudgeted) Long.MAX_VALUE else System.nanoTime() + thinkTime * 1_000_000L
         val startNanos = System.nanoTime()
 
         var bestMove = legalMoves.first()
@@ -152,6 +175,7 @@ open class NegamaxBot(
             previousBest = move
             bestScore = score
             depthReached = depth
+            nodeLimitArmed = nodeBudgeted
 
             log.debug {
                 val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
@@ -162,10 +186,14 @@ open class NegamaxBot(
             if (abs(score) >= MATE - MAX_PLY) break
         }
 
-        log.info {
+        lastSearchMove = bestMove
+        lastSearchScore = bestScore
+        val summary = {
             val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
             "$colour chose ${bestMove.toAlgebraic()} depth=$depthReached score=$bestScore nodes=$nodesSearched total=${elapsedMs}ms think=${thinkTime}ms"
         }
+        // Node-budgeted searches are labelling runs, millions of positions: keep them out of INFO.
+        if (nodeBudgeted) log.debug(summary) else log.info(summary)
 
         return bestMove
     }
@@ -368,6 +396,7 @@ open class NegamaxBot(
     }
 
     protected fun timeUp(): Boolean {
+        if (nodeLimitArmed && nodesSearched >= nodeLimit) return true
         if ((nodesSearched and TIME_CHECK_MASK) != 0) return false
         externalStop?.let { if (it()) return true }
         if (fixedDepth != null) return false
@@ -407,5 +436,6 @@ open class NegamaxBot(
 
         private const val DELTA_MARGIN = 200
         private const val TIME_CHECK_MASK = 2047
+        const val NO_NODE_LIMIT = Int.MAX_VALUE
     }
 }

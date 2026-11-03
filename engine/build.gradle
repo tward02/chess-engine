@@ -10,6 +10,8 @@ version = '1.0.0'
 dependencies {
     // The tournament runners are coroutine-based; previously inherited transitively via Compose.
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2'
+    // JSON parsing only (no compiler plugin needed), for LichessGameImporter's NDJSON.
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.13.4'
@@ -33,12 +35,21 @@ tasks.register('longTest', Test) {
     classpath = sourceSets.test.runtimeClasspath
 
     useJUnitPlatform()
+    // The gate runs many concurrent games, each with two bots holding their own hash tables.
+    maxHeapSize = '4g'
 
     // Lets the A/B harnesses be resized from the command line, e.g. -Pnnue.ab.games=10
     ['nnue.ab.games', 'nnue.ab.timeMillis', 'nnue.ab.fixedDepth', 'nnue.ab.network',
      'tempo.ab.games', 'tempo.ab.timeMillis', 'tempo.ab.increment',
      'omega.ab.games', 'omega.ab.timeMillis', 'omega.ab.increment', 'omega.ab.fixedDepth',
-     'nnue.cmp.games', 'nnue.cmp.fixedDepth', 'nnue.cmp.timeMillis', 'nnue.cmp.nets'].each { name ->
+     'nnue.cmp.games', 'nnue.cmp.fixedDepth', 'nnue.cmp.timeMillis', 'nnue.cmp.nets', 'nnue.cmp.bot',
+     'nnue.gate.candidate', 'nnue.gate.base', 'nnue.gate.bot', 'nnue.gate.timeMillis',
+     'nnue.gate.increment', 'nnue.gate.fixedDepth', 'nnue.gate.elo0', 'nnue.gate.elo1',
+     'nnue.gate.alpha', 'nnue.gate.beta', 'nnue.gate.maxPairs', 'nnue.gate.threads',
+     'nnue.gate.openings',
+     'uci.match.candidate', 'uci.match.base', 'uci.match.timeMillis', 'uci.match.increment',
+     'uci.match.elo0', 'uci.match.elo1', 'uci.match.alpha', 'uci.match.beta', 'uci.match.maxPairs',
+     'uci.match.threads', 'uci.match.openings'].each { name ->
         def value = providers.gradleProperty(name)
         if (value.present) systemProperty name, value.get()
     }
@@ -58,8 +69,33 @@ tasks.register('generateNnueData', JavaExec) {
     if (nnueArgs.present) args nnueArgs.get().split(' ')
 }
 
+tasks.register('importLichessGames', JavaExec) {
+    description = "Turns the bot's Lichess games into NNUE training data"
+    group = 'nnue'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.nnue.LichessGameImporterKt'
+    maxHeapSize = '3g'
+    if (nnueArgs.present) args nnueArgs.get().split(' ')
+}
+
+tasks.register('packNnueData', JavaExec) {
+    description = 'Converts FEN text training data to the compact binary format (a .bin beside each file)'
+    group = 'nnue'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.nnue.TrainingDataKt'
+    if (nnueArgs.present) args nnueArgs.get().split(' ')
+}
+
+tasks.register('generateOpeningSuite', JavaExec) {
+    description = 'Builds the balanced opening suite the NNUE gate plays from'
+    group = 'nnue'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.tournament.OpeningSuiteKt'
+    if (nnueArgs.present) args nnueArgs.get().split(' ')
+}
+
 tasks.register('trainNnue', JavaExec) {
-    description = 'Trains the NNUE network and writes it over the bundled resource'
+    description = 'Trains an NNUE network (default output src/main/resources/nnue/new.nnue)'
     group = 'nnue'
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'com.tward.engine.nnue.NnueTrainerKt'
@@ -77,4 +113,13 @@ tasks.withType(Test).configureEach {
     afterTest { descriptor, result ->
         println "${descriptor.name} took ${result.endTime - result.startTime} ms"
     }
+}
+
+tasks.register('bench', JavaExec) {
+    description = 'Fixed-depth search benchmark of the deployed bot (nodes/s); -PbenchDepth= sets the depth'
+    group = 'verification'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.tward.engine.bench.BenchmarkKt'
+    def depth = providers.gradleProperty('benchDepth')
+    if (depth.present) args depth.get()
 }

@@ -12,7 +12,7 @@ class MvvLvaMoveOrderer : MoveOrderer {
 
     override fun order(moves: List<Move>, ply: Int): List<Move> {
         if (moves.size <= 1) return moves
-        return moves.sortedByDescending { scoreOf(it) }
+        return orderByScoreDescending(moves) { scoreOf(it) }
     }
 
     /**

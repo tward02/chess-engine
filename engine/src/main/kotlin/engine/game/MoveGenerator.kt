@@ -37,6 +37,10 @@ class MoveGenerator(private val board: Board) {
                 continue
             }
 
+            // The probe restores the board exactly, so its board listener (an NNUE accumulator) has
+            // nothing to track; pausing it skips two wasted updates per verified move.
+            val listener = board.listener
+            board.listener = null
             board.makeMove(move)
 
             if (!isSquareAttacked(board.findKing(myColour), enemyColour)) {
@@ -44,6 +48,7 @@ class MoveGenerator(private val board: Board) {
             }
 
             board.undoMove(move)
+            board.listener = listener
         }
 
         return legalMoves

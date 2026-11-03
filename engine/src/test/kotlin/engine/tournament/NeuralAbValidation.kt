@@ -26,7 +26,7 @@ import kotlin.test.Test
  * Resize from the command line with -Pnnue.ab.games=100 -Pnnue.ab.timeMillis=6000. Passing
  * -Pnnue.ab.fixedDepth=6 instead plays untimed at exactly that depth for both bots — that removes
  * evaluation speed from the comparison, so the score measures evaluation quality alone. Passing
- * -Pnnue.ab.network=build/nnue/candidate.nnue makes Neural play with that net file instead of the
+ * -Pnnue.ab.network=../nnue-data/candidate.nnue makes Neural play with that net file instead of the
  * bundled one, so candidate nets can be A/B'd without overwriting the resource.
  */
 @LongRunning

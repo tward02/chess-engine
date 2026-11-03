@@ -1,0 +1,14 @@
+[Unit]
+Description=lichess-bot (plays the UCI engine on Lichess)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=chessbot
+WorkingDirectory=/opt/chessbot/lichess-bot
+ExecStart=/opt/chessbot/lichess-bot/venv/bin/python lichess-bot.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

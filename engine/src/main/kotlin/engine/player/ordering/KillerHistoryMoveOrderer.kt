@@ -25,7 +25,7 @@ class KillerHistoryMoveOrderer(
 
     override fun order(moves: List<Move>, ply: Int): List<Move> {
         if (moves.size <= 1) return moves
-        return moves.sortedByDescending { scoreOf(it, ply) }
+        return orderByScoreDescending(moves) { scoreOf(it, ply) }
     }
 
     private fun scoreOf(move: Move, ply: Int): Int {

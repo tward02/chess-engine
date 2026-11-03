@@ -1,0 +1,4 @@
+# Normalise line endings. Without this a Windows checkout (core.autocrlf=true) rewrites
+# text files to CRLF, which broke the opening-book parser (trailing '\r' on play counts).
+* text=auto eol=lf
+*.bat text eol=crlf

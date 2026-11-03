@@ -46,3 +46,8 @@ bin/
 
 ### Secrets ###
 .env
+### Deploy secrets ###
+deploy/deploy.env
+
+### NNUE training data (large; back it up separately) ###
+nnue-data/

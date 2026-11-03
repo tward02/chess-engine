@@ -14,14 +14,16 @@ import com.tward.engine.player.ClockAware
  * its actual thinking time and running to zero is an immediate loss; 0 means untimed (bots get 0
  * and never flag). [incrementMillis] is a Fischer bonus added after each completed move, and is
  * announced to [ClockAware] bots so they can budget with it. A game that never resolves within
- * [maxPlies] is adjudicated a draw.
+ * [maxPlies] is adjudicated a draw. [startFen] starts from that position instead of the initial one
+ * (opening suites); the bots should then have their own books off.
  */
 internal fun playGame(
     white: BotSpec,
     black: BotSpec,
     maxPlies: Int,
     initialTimeMillis: Int,
-    incrementMillis: Int = 0
+    incrementMillis: Int = 0,
+    startFen: String? = null
 ): GameResult {
 
     val whiteBot = white.createBot(Colour.WHITE)
@@ -29,7 +31,7 @@ internal fun playGame(
     (whiteBot as? ClockAware)?.incrementMillis = incrementMillis
     (blackBot as? ClockAware)?.incrementMillis = incrementMillis
 
-    val game = ChessGame(Board.getStartingBoard())
+    val game = ChessGame(startFen?.let(Board::fromFEN) ?: Board.getStartingBoard())
 
     val timed = initialTimeMillis > 0
     var whiteTime = initialTimeMillis

@@ -1,0 +1,17 @@
+[Unit]
+Description=Chess bot monitor (dashboard + Home Assistant MQTT)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=chessbot
+EnvironmentFile=/etc/chessbot/monitor.env
+Environment=JAVA_OPTS=-Xmx256m
+ExecStart=/opt/chessbot/chess-monitor/bin/chess-monitor
+# The JVM exits 143 on SIGTERM; that's a clean stop, not a failure.
+SuccessExitStatus=143
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

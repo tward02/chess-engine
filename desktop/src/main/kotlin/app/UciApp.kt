@@ -1,5 +1,6 @@
 package com.tward.app
 
+import com.tward.engine.bench.Benchmark
 import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.game.ChessGame
@@ -22,13 +23,20 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * Logging goes to stderr (java.util.logging's ConsoleHandler), keeping stdout a
  * clean UCI channel. Configure the bot the engine plays as below.
+ *
+ * `java -jar uci-engine.jar bench [depth]` runs the fixed-depth speed benchmark on the deployed bot
+ * instead (nodes/s on this machine; the node count fingerprints the search + net).
  */
 // The strongest net in the NNUE round robin (see engine/src/main/resources/nnue/README.md).
 private const val NETWORK = "/nnue/default.nnue"
 
-fun main() {
+fun main(args: Array<String>) {
     // Logs to stderr only; UCI protocol traffic stays on stdout uncorrupted.
     LogConfig.configure()
+    if (args.firstOrNull() == "bench") {
+        bench(args.getOrNull(1)?.toIntOrNull() ?: Benchmark.DEFAULT_DEPTH)
+        return
+    }
 
     // lichess-bot starts a fresh JVM per game, so the first searches would otherwise run in the
     // interpreter while the JIT catches up. Warm the search up until the first real `go`.
@@ -42,13 +50,7 @@ fun main() {
         },
         // One bot per process here, so it can afford a far larger transposition table (4M entries)
         // than the in-server default.
-        botFactory = { colour ->
-            OmegaNegamaxBot(
-                colour = colour,
-                evaluator = NnueEvaluator(NnueNetwork.fromResource(NETWORK)),
-                transpositionTableBits = 22
-            )
-        },
+        botFactory = { colour -> deployedBot(colour) },
         asyncSearch = true
     )
 
@@ -82,4 +84,20 @@ private fun startWarmup(stop: AtomicBoolean) {
         priority = Thread.MIN_PRIORITY
         start()
     }
+}
+
+private fun deployedBot(colour: Colour, fixedDepth: Int? = null) = OmegaNegamaxBot(
+    colour = colour,
+    fixedDepth = fixedDepth,
+    useOpeningBookMoves = fixedDepth == null,
+    evaluator = NnueEvaluator(NnueNetwork.fromResource(NETWORK)),
+    transpositionTableBits = 22
+)
+
+private fun bench(depth: Int) {
+    println("Warming up the JIT...")
+    Benchmark.run(depth = minOf(depth, 7), bot = { deployedBot(it, minOf(depth, 7)) })
+    println("Benchmark: $NETWORK, depth $depth over ${Benchmark.POSITIONS.size} positions")
+    val result = Benchmark.run(depth = depth, bot = { deployedBot(it, depth) }) { println("  $it") }
+    println("Total: $result")
 }

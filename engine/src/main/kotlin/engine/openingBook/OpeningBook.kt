@@ -14,8 +14,20 @@ class OpeningBook(file: String) {
     // Parsed once per file path and cached read-only; safe to share across many bot instances
     val movesByPosition: Map<String, List<BookMove>> = parsedBooks.getOrPut(file) { parse(file) }
 
-    fun hasBookMove(fen: String): Boolean {
-        return movesByPosition.containsKey(fen)
+    fun hasBookMove(fen: String): Boolean = movesFor(fen) != null
+
+    /**
+     * The book entries for a short FEN (board, side, castling, en passant). The book records an
+     * en-passant square only when a capture is actually possible, while `Board.toFEN` writes one
+     * after every double pawn push — so an exact miss is retried with the square cleared.
+     */
+    fun movesFor(fen: String): List<BookMove>? =
+        movesByPosition[fen] ?: withoutEnPassant(fen)?.let { movesByPosition[it] }
+
+    private fun withoutEnPassant(fen: String): String? {
+        val fields = fen.split(' ')
+        if (fields.size < 4 || fields[3] == "-") return null
+        return (fields.take(3) + "-" + fields.drop(4)).joinToString(" ")
     }
 
     fun getBookMove(fen: String, weight: Double = 0.5): BookMove? {
@@ -26,7 +38,7 @@ class OpeningBook(file: String) {
             return ceil(playCount.toDouble().pow(trueWeight)).toInt()
         }
 
-        val moves = movesByPosition[fen] ?: return null
+        val moves = movesFor(fen) ?: return null
 
         var totalPlayCount = 0
         for (move in moves) {

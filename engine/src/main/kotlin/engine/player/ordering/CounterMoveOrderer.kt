@@ -38,7 +38,7 @@ class CounterMoveOrderer(
     override fun order(moves: List<Move>, ply: Int): List<Move> {
         if (moves.size <= 1) return moves
         val counter = counterTo(previousMove)
-        return moves.sortedByDescending { scoreOf(it, ply, counter) }
+        return orderByScoreDescending(moves) { scoreOf(it, ply, counter) }
     }
 
     private fun scoreOf(move: Move, ply: Int, counter: Move?): Int {

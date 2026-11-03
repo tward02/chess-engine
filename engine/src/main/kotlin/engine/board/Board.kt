@@ -20,6 +20,12 @@ class Board {
     // grid mutator besides [clearBoard]/[copy], which reset/copy it). Makes [zobristKey] O(1).
     private var pieceHash = 0L
 
+    /**
+     * Told of every piece change made through [setPiece] or [clearBoard] (see [BoardListener]).
+     * Not copied by [copy]: a copy starts unobserved.
+     */
+    var listener: BoardListener? = null
+
     var activeColour: Colour = Colour.WHITE
     var enPassantTarget: Square? = null
 
@@ -35,6 +41,9 @@ class Board {
     var fullMoveNumber = 0
 
     fun getPiece(square: Square): Piece? = grid[square.row][square.col]
+
+    /** Allocation-free variant for hot paths (no [Square] needed). */
+    fun getPiece(col: Int, row: Int): Piece? = grid[row][col]
 
     /**
      * The position's 64-bit Zobrist hash (pieces + side to move + castling rights + en-passant
@@ -58,6 +67,7 @@ class Board {
         if (previous != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(previous, square.col, square.row)
         if (piece != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(piece, square.col, square.row)
         grid[square.row][square.col] = piece
+        listener?.pieceChanged(square.col, square.row, previous, piece)
         // makeMove always writes the king's destination before clearing its origin, so tracking
         // placements here keeps the cache correct through normal moves, castling and FEN setup.
         if (piece != null && piece.type == PieceType.KING) {
@@ -98,6 +108,7 @@ class Board {
             }
         }
         pieceHash = 0L
+        listener?.boardCleared()
     }
 
     fun copy(): Board {
