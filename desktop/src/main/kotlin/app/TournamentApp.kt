@@ -41,10 +41,10 @@ fun main() = application {
         )
     }
 
-    val specB = BotSpec("Default Better Negamax") { colour ->
+    val specB = BotSpec("Default V1 Negamax") { colour ->
         OmegaNegamaxBot(
             colour = colour,
-            evaluator = NnueEvaluator( fromResource("/nnue/default-v0.nnue"))
+            evaluator = NnueEvaluator( fromResource("/nnue/default-v1.nnue"))
         )
     }
 
