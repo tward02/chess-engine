@@ -1,10 +1,12 @@
 package com.tward.engine.player.bot
 
+import com.tward.engine.board.Attacks
+import com.tward.engine.board.Bitboards
 import com.tward.engine.board.Board
 import com.tward.engine.board.Colour
 import com.tward.engine.board.Move
+import com.tward.engine.board.Piece
 import com.tward.engine.board.PieceType
-import com.tward.engine.game.MoveGenerator
 
 /**
  * Static Exchange Evaluation (SEE): the material a capture wins or loses if both sides keep taking on
@@ -22,17 +24,6 @@ internal object StaticExchangeEvaluator {
     private const val NONE = -1
     private const val MAX_EXCHANGE = 34   // 32 pieces plus the initial capture, with room to spare
 
-    // The MoveGenerator offset lists as primitive arrays, in the same order.
-    private val knightCols = MoveGenerator.knightOffsets.map { it.first }.toIntArray()
-    private val knightRows = MoveGenerator.knightOffsets.map { it.second }.toIntArray()
-    private val kingCols = MoveGenerator.kingOffsets.map { it.first }.toIntArray()
-    private val kingRows = MoveGenerator.kingOffsets.map { it.second }.toIntArray()
-    private val bishopCols = MoveGenerator.bishopOffsets.map { it.first }.toIntArray()
-    private val bishopRows = MoveGenerator.bishopOffsets.map { it.second }.toIntArray()
-    private val rookCols = MoveGenerator.rookOffsets.map { it.first }.toIntArray()
-    private val rookRows = MoveGenerator.rookOffsets.map { it.second }.toIntArray()
-    private val pawnCols = intArrayOf(-1, 1)
-
     private val gains = ThreadLocal.withInitial { IntArray(MAX_EXCHANGE) }
 
     fun evaluate(board: Board, move: Move): Int {
@@ -41,9 +32,8 @@ internal object StaticExchangeEvaluator {
         // En passant lands on an empty square; SEE on that square doesn't model it, so skip it.
         if (board.getPiece(move.to) == null) return 0
 
-        val toCol = move.to.col
-        val toRow = move.to.row
-        var removed = bit(move.from.col, move.from.row)
+        val to = Bitboards.index(move.to)
+        var removed = 1L shl Bitboards.index(move.from)
 
         val gain = gains.get()
         var count = 1
@@ -52,7 +42,7 @@ internal object StaticExchangeEvaluator {
         var side = mover.colour.opposite()
 
         while (count < MAX_EXCHANGE) {
-            val attacker = leastValuableAttacker(board, toCol, toRow, side, removed)
+            val attacker = leastValuableAttacker(board, to, side, removed)
             if (attacker == NONE) break
             gain[count] = onSquareValue - gain[count - 1]   // side to move can win the piece on the square
             count++
@@ -70,78 +60,72 @@ internal object StaticExchangeEvaluator {
 
     /**
      * [side]'s least valuable piece attacking the target, skipping [removed] squares, packed as
-     * `square | type.ordinal << 8`; [NONE] if there is none.
+     * `square | type.ordinal << 8`; [NONE] if there is none. Within a piece type the candidates are
+     * tried in the generator's direction order, so which of two equal attackers goes first (and so
+     * which x-ray opens) never changes. Bitboard tests skip the scans that can't find anything.
      */
-    private fun leastValuableAttacker(board: Board, toCol: Int, toRow: Int, side: Colour, removed: Long): Int {
-        // Pawns: a `side` pawn attacks the target from one rank "behind" the direction it pushes.
-        val pawnRow = toRow + if (side == Colour.WHITE) 1 else -1
-        for (dc in pawnCols) {
-            val found = pieceAt(board, toCol + dc, pawnRow, side, PieceType.PAWN, removed)
-            if (found != NONE) return found
-        }
+    private fun leastValuableAttacker(board: Board, to: Int, side: Colour, removed: Long): Int {
+        val available = board.pieces(side) and removed.inv()
 
-        for (i in knightCols.indices) {
-            val found = pieceAt(board, toCol + knightCols[i], toRow + knightRows[i], side, PieceType.KNIGHT, removed)
-            if (found != NONE) return found
+        // A `side` pawn attacks the target from where an opposing pawn on the target would attack;
+        // the lower index is the left-hand one, the order the scan always used.
+        val pawns = Attacks.pawn(side.opposite(), to) and board.pieces(side, PieceType.PAWN) and available
+        if (pawns != 0L) return java.lang.Long.numberOfTrailingZeros(pawns) or (PieceType.PAWN.ordinal shl 8)
+
+        if (Attacks.knight(to) and board.pieces(side, PieceType.KNIGHT) and available != 0L) {
+            for (sq in Attacks.knightTargets(to)) {
+                if (removed and (1L shl sq) == 0L && board.getPiece(Bitboards.col(sq), Bitboards.row(sq)).isA(side, PieceType.KNIGHT)) {
+                    return sq or (PieceType.KNIGHT.ordinal shl 8)
+                }
+            }
         }
 
         // The first slider met on any diagonal / straight ray: a bishop or rook is taken at once, a
         // queen only after both (it's dearer).
-        val diagonal = firstSliderAttacker(board, toCol, toRow, side, removed, bishopCols, bishopRows, PieceType.BISHOP)
+        val occupied = board.occupied and removed.inv()
+        val queens = board.pieces(side, PieceType.QUEEN)
+        val diagonal = if (Attacks.bishop(to, occupied) and (board.pieces(side, PieceType.BISHOP) or queens) and available != 0L) {
+            firstSliderAttacker(board, to, side, removed, 0, PieceType.BISHOP)
+        } else NONE
         if (diagonal != NONE && diagonal ushr 8 == PieceType.BISHOP.ordinal) return diagonal
-        val straight = firstSliderAttacker(board, toCol, toRow, side, removed, rookCols, rookRows, PieceType.ROOK)
+        val straight = if (Attacks.rook(to, occupied) and (board.pieces(side, PieceType.ROOK) or queens) and available != 0L) {
+            firstSliderAttacker(board, to, side, removed, 4, PieceType.ROOK)
+        } else NONE
         if (straight != NONE && straight ushr 8 == PieceType.ROOK.ordinal) return straight
         if (diagonal != NONE) return diagonal
         if (straight != NONE) return straight
 
-        for (i in kingCols.indices) {
-            val found = pieceAt(board, toCol + kingCols[i], toRow + kingRows[i], side, PieceType.KING, removed)
-            if (found != NONE) return found
-        }
+        val king = Attacks.king(to) and board.pieces(side, PieceType.KING) and available
+        if (king != 0L) return java.lang.Long.numberOfTrailingZeros(king) or (PieceType.KING.ordinal shl 8)
 
         return NONE
     }
 
-    /** First non-removed piece along the rays (in order), if it is a [side] [straightType] or queen. */
+    /** First non-removed piece along the four rays from [firstDirection] (in order), if it is a [side] [straightType] or queen. */
     private fun firstSliderAttacker(
         board: Board,
-        toCol: Int,
-        toRow: Int,
+        to: Int,
         side: Colour,
         removed: Long,
-        dCols: IntArray,
-        dRows: IntArray,
+        firstDirection: Int,
         straightType: PieceType
     ): Int {
-        for (d in dCols.indices) {
-            val dCol = dCols[d]
-            val dRow = dRows[d]
-            var col = toCol + dCol
-            var row = toRow + dRow
-            while (col in 0..7 && row in 0..7) {
-                if (removed and bit(col, row) == 0L) {
-                    val piece = board.getPiece(col, row)
-                    if (piece != null) {
-                        if (piece.colour == side && (piece.type == straightType || piece.type == PieceType.QUEEN)) {
-                            return (row * 8 + col) or (piece.type.ordinal shl 8)
-                        }
-                        break   // a blocker that isn't a matching attacker stops this ray
-                    }
+        val occupied = board.occupied
+        for (direction in firstDirection until firstDirection + 4) {
+            for (sq in Attacks.ray(direction, to)) {
+                val bit = 1L shl sq
+                if (removed and bit != 0L || occupied and bit == 0L) continue
+                val piece = board.getPiece(Bitboards.col(sq), Bitboards.row(sq))!!
+                if (piece.colour == side && (piece.type == straightType || piece.type == PieceType.QUEEN)) {
+                    return sq or (piece.type.ordinal shl 8)
                 }
-                col += dCol
-                row += dRow
+                break   // a blocker that isn't a matching attacker stops this ray
             }
         }
         return NONE
     }
 
-    private fun pieceAt(board: Board, col: Int, row: Int, colour: Colour, type: PieceType, removed: Long): Int {
-        if (col !in 0..7 || row !in 0..7 || removed and bit(col, row) != 0L) return NONE
-        val piece = board.getPiece(col, row) ?: return NONE
-        return if (piece.colour == colour && piece.type == type) (row * 8 + col) or (type.ordinal shl 8) else NONE
-    }
-
-    private fun bit(col: Int, row: Int): Long = 1L shl (row * 8 + col)
+    private fun Piece?.isA(colour: Colour, type: PieceType): Boolean = this != null && this.colour == colour && this.type == type
 
     private fun value(type: PieceType): Int = when (type) {
         PieceType.PAWN -> 100

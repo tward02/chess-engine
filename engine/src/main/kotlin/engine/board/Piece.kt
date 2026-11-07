@@ -50,6 +50,16 @@ data class Piece(var type: PieceType, var colour: Colour) {
     fun pieceChar(): Char {
         return type.char()
     }
+
+    companion object {
+        private val SHARED = Array(12) { Piece(PieceType.entries[it % 6], Colour.entries[it / 6]) }
+
+        /**
+         * A shared instance for move generation, which would otherwise allocate one per move. Never
+         * mutate it (nothing mutates pieces; [type]/[colour] are `var` for historical reasons only).
+         */
+        fun of(type: PieceType, colour: Colour): Piece = SHARED[colour.ordinal * 6 + type.ordinal]
+    }
 }
 
 enum class PieceType {

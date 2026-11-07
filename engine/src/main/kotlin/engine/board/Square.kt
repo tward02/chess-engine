@@ -20,6 +20,11 @@ data class Square(val col: Int, val row: Int) {
 
     companion object {
 
+        private val ALL = Array(64) { Square(Bitboards.col(it), Bitboards.row(it)) }
+
+        /** The shared instance for bitboard index [index] (squares are immutable, so hot paths reuse them). */
+        fun of(index: Int): Square = ALL[index]
+
         fun fromString(str: String): Square {
 
             require(str.length == 2) {

@@ -41,14 +41,14 @@ fun main() = application {
         )
     }
 
-    val specB = BotSpec("Default V1 Negamax") { colour ->
+    val specB = BotSpec("Default V3 Negamax") { colour ->
         OmegaNegamaxBot(
             colour = colour,
-            evaluator = NnueEvaluator( fromResource("/nnue/default-v1.nnue"))
+            evaluator = NnueEvaluator( fromResource("/nnue/default-v3.nnue"))
         )
     }
 
-    val tournament = Tournament(specA, specB, totalGames = 50, initialTimeMillis = 60_000, incrementTimeMillis = 1_000)
+    val tournament = Tournament(specA, specB, totalGames = 100, initialTimeMillis = 60_000, incrementTimeMillis = 1_000)
 
     Window(
         onCloseRequest = ::exitApplication,

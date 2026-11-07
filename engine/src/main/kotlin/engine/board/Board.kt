@@ -20,6 +20,12 @@ class Board {
     // grid mutator besides [clearBoard]/[copy], which reset/copy it). Makes [zobristKey] O(1).
     private var pieceHash = 0L
 
+    // Bitboards mirroring the grid (bit = Bitboards.index(col, row)), maintained alongside it by
+    // setPiece/clearBoard/copy: one per colour × piece type, one per colour, and all pieces.
+    private val pieceBits = LongArray(12)
+    private val colourBits = LongArray(2)
+    private var occupiedBits = 0L
+
     /**
      * Told of every piece change made through [setPiece] or [clearBoard] (see [BoardListener]).
      * Not copied by [copy]: a copy starts unobserved.
@@ -45,6 +51,15 @@ class Board {
     /** Allocation-free variant for hot paths (no [Square] needed). */
     fun getPiece(col: Int, row: Int): Piece? = grid[row][col]
 
+    /** Bitboard of [colour]'s pieces of [type] (bit = [Bitboards.index]). */
+    fun pieces(colour: Colour, type: PieceType): Long = pieceBits[colour.ordinal * 6 + type.ordinal]
+
+    /** Bitboard of all of [colour]'s pieces. */
+    fun pieces(colour: Colour): Long = colourBits[colour.ordinal]
+
+    /** Bitboard of every occupied square. */
+    val occupied: Long get() = occupiedBits
+
     /**
      * The position's 64-bit Zobrist hash (pieces + side to move + castling rights + en-passant
      * file), computed in O(1) from the incrementally maintained piece hash. Used as the
@@ -66,6 +81,9 @@ class Board {
         val previous = grid[square.row][square.col]
         if (previous != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(previous, square.col, square.row)
         if (piece != null) pieceHash = pieceHash xor ZobristKeys.pieceKey(piece, square.col, square.row)
+        val bit = 1L shl Bitboards.index(square.col, square.row)
+        if (previous != null) toggleBits(previous, bit)
+        if (piece != null) toggleBits(piece, bit)
         grid[square.row][square.col] = piece
         listener?.pieceChanged(square.col, square.row, previous, piece)
         // makeMove always writes the king's destination before clearing its origin, so tracking
@@ -73,6 +91,13 @@ class Board {
         if (piece != null && piece.type == PieceType.KING) {
             kingSquares[piece.colour.ordinal] = square
         }
+    }
+
+    private fun toggleBits(piece: Piece, bit: Long) {
+        val colour = piece.colour.ordinal
+        pieceBits[colour * 6 + piece.type.ordinal] = pieceBits[colour * 6 + piece.type.ordinal] xor bit
+        colourBits[colour] = colourBits[colour] xor bit
+        occupiedBits = occupiedBits xor bit
     }
 
     fun setupStandardPosition() {
@@ -108,6 +133,9 @@ class Board {
             }
         }
         pieceHash = 0L
+        pieceBits.fill(0L)
+        colourBits.fill(0L)
+        occupiedBits = 0L
         listener?.boardCleared()
     }
 
@@ -128,7 +156,11 @@ class Board {
         board.blackHasCastled = blackHasCastled
         board.halfMoveClock = halfMoveClock
         board.fullMoveNumber = fullMoveNumber
-        board.pieceHash = pieceHash   // the grid writes above bypass setPiece
+        // the grid writes above bypass setPiece
+        board.pieceHash = pieceHash
+        pieceBits.copyInto(board.pieceBits)
+        colourBits.copyInto(board.colourBits)
+        board.occupiedBits = occupiedBits
         return board
     }
 
