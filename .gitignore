@@ -52,3 +52,7 @@ deploy/deploy.env
 ### NNUE training data (large; back it up separately) ###
 nnue-data/
 /deploy/monitor.env
+
+# Local lichess-bot installs (config.yml holds the bot API token)
+/lichess-bot-master/
+/lichess-bot-master-2/
