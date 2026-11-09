@@ -4,9 +4,15 @@ on:
   push:
   pull_request:
 
+# A newer push to the same branch/PR cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -23,5 +29,15 @@ jobs:
       - name: Compile
         run: ./gradlew compileKotlin --console=plain
 
+      # Every module's test task; :engine:test excludes @LongRunning (perft depths, gates, A/B runs).
+      # xvfb gives the Compose UI tests (desktop/client/ui) a display.
       - name: Test
         run: xvfb-run --auto-servernum ./gradlew test --console=plain
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '*/build/reports/tests/test/'
+          retention-days: 7
