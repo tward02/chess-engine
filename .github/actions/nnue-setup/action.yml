@@ -1,0 +1,28 @@
+name: NNUE job setup
+description: JDK 21 + Gradle for the NNUE tools, and NNUE_DATA_DIR pointed at the runner's persistent data folder.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    # The runner keeps ~/.gradle between jobs on its own, so GitHub's cache would only add
+    # uploads/downloads of the same files.
+    - uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: true
+
+    # Training data must live outside the workspace: checkout's clean step deletes ignored files.
+    # Override the location with the repository variable NNUE_DATA_DIR.
+    - name: Locate training data
+      shell: bash
+      env:
+        CONFIGURED: ${{ vars.NNUE_DATA_DIR }}
+      run: |
+        dir="${CONFIGURED:-$HOME/nnue-data}"
+        mkdir -p "$dir"
+        echo "NNUE_DATA_DIR=$dir" >> "$GITHUB_ENV"
+        echo "Training data: $dir ($(du -sh "$dir" | cut -f1), $(df -h --output=avail "$dir" | tail -1 | tr -d ' ') free)"

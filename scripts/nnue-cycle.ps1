@@ -22,6 +22,7 @@
   .\scripts\nnue-cycle.ps1 -Name gen3
   .\scripts\nnue-cycle.ps1 -Name gen3 -Lichess -ExtraData nnue-data\data-gen2-a.txt,nnue-data\data-gen2-b.txt
   .\scripts\nnue-cycle.ps1 -Name gen3b -SkipGenerate -SelfPlay nnue-data\gen3-selfplay.txt -Blend 0.1
+  .\scripts\nnue-cycle.ps1 -Name gen8-256 -SkipGenerate -SelfPlay nnue-data\gen8-selfplay.txt -Hidden 256 -WeightDecay 0.01
   .\scripts\nnue-cycle.ps1 -Name gen3 -SkipGenerate -SkipTrain -SkipGate -Promote
 #>
 param(
@@ -39,6 +40,7 @@ param(
     [double]$Blend = 0.3,
     [double]$LearningRate = 0.002,
     [int]$Batch = 1024,
+    [double]$WeightDecay = 0,
     [switch]$SkipGenerate,
     [switch]$SkipTrain,
     [switch]$SkipGate,
@@ -128,12 +130,13 @@ if (-not $SkipTrain) {
         $data = @($data | ForEach-Object { if ($_.EndsWith('.bin')) { $_ } else { [System.IO.Path]::ChangeExtension($_, '.bin') } })
     }
 
-    Step "Training $Name on $($data.Count) file(s): hidden=$Hidden epochs=$Epochs blend=$Blend batch=$Batch"
+    Step "Training $Name on $($data.Count) file(s): hidden=$Hidden epochs=$Epochs blend=$Blend batch=$Batch decay=$WeightDecay"
     $dataArg = $data -join ','
     $blendArg = $Blend.ToString($inv)
     $lrArg = $LearningRate.ToString($inv)
+    $decayArg = $WeightDecay.ToString($inv)
     Invoke-Gradle @(':engine:trainNnue',
-        "-PnnueArgs=data=$dataArg out=$candidate hidden=$Hidden epochs=$Epochs blend=$blendArg lr=$lrArg batch=$Batch threads=$([Environment]::ProcessorCount)")
+        "-PnnueArgs=data=$dataArg out=$candidate hidden=$Hidden epochs=$Epochs blend=$blendArg lr=$lrArg batch=$Batch decay=$decayArg threads=$([Environment]::ProcessorCount)")
 }
 
 # --- 4. Gate ---

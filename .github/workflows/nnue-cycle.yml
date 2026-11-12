@@ -1,0 +1,195 @@
+name: NNUE cycle
+
+# One distillation cycle on the self-hosted NNUE runner: generate -> Lichess -> train -> gate -> promote.
+# Each stage is its own job, so "Re-run failed jobs" resumes where it broke, and any stage can be
+# switched off (games: 0 skips generation; untick train/gate to re-gate or re-train only).
+# Data persists in NNUE_DATA_DIR on the runner (default ~/nnue-data). See scripts/nnue-cycle.sh.
+# A passed gate is promoted on a branch nnue/<name> with a pull request; merge it, then deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Cycle name, e.g. gen9 (also seeds the self-play games)'
+        required: true
+        type: string
+      games:
+        description: 'Self-play games to generate (0 = skip generation)'
+        type: number
+        default: 40000
+      nodes:
+        description: 'Teacher search nodes per position'
+        type: number
+        default: 30000
+      lichess:
+        description: "Re-label the bot's recent Lichess games"
+        type: boolean
+        default: true
+      extra_data:
+        description: 'Extra training data: auto (all accumulated), none, or comma-separated files in the data dir'
+        type: string
+        default: auto
+      train_args:
+        description: 'Trainer overrides, e.g. "hidden=256 decay=0.01 lr=0.0005 epochs=16"'
+        type: string
+        default: ''
+      train:
+        description: 'Train the candidate'
+        type: boolean
+        default: true
+      gate:
+        description: 'Gate the candidate against the bundled default.nnue'
+        type: boolean
+        default: true
+      gate_args:
+        description: 'Gate overrides, e.g. "-Pnnue.gate.timeMillis=20000 -Pnnue.gate.threads=3"'
+        type: string
+        default: ''
+      promote:
+        description: 'If the gate PASSES, open a pull request installing the net as default.nnue'
+        type: boolean
+        default: true
+
+# One cycle at a time: they share the data folder and the CPU.
+concurrency:
+  group: nnue-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NAME: ${{ inputs.name }}
+
+jobs:
+  generate:
+    if: inputs.games > 0
+    runs-on: [self-hosted, nnue]
+    timeout-minutes: 4320
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/nnue-setup
+      - name: Generate self-play
+        env:
+          GAMES: ${{ inputs.games }}
+          NODES: ${{ inputs.nodes }}
+        run: bash scripts/nnue-cycle.sh generate --name "$NAME" --games "$GAMES" --nodes "$NODES"
+
+  lichess:
+    needs: generate
+    if: ${{ !cancelled() && !failure() && inputs.lichess }}
+    runs-on: [self-hosted, nnue]
+    timeout-minutes: 600
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/nnue-setup
+      - name: Import and re-label Lichess games
+        env:
+          NODES: ${{ inputs.nodes }}
+          LICHESS_TOKEN: ${{ secrets.LICHESS_TOKEN }}
+        run: bash scripts/nnue-cycle.sh lichess --name "$NAME" --nodes "$NODES"
+
+  train:
+    needs: [generate, lichess]
+    if: ${{ !cancelled() && !failure() && inputs.train }}
+    runs-on: [self-hosted, nnue]
+    timeout-minutes: 600
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/nnue-setup
+      - name: Train
+        env:
+          EXTRA_DATA: ${{ inputs.extra_data }}
+          TRAIN_ARGS: ${{ inputs.train_args }}
+        run: bash scripts/nnue-cycle.sh train --name "$NAME" --extra-data "$EXTRA_DATA" --train-args "$TRAIN_ARGS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.name }}-net
+          path: ${{ env.NNUE_DATA_DIR }}/${{ inputs.name }}.nnue
+          retention-days: 30
+
+  gate:
+    needs: train
+    if: ${{ !cancelled() && !failure() && inputs.gate }}
+    runs-on: [self-hosted, nnue]
+    timeout-minutes: 2880
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/nnue-setup
+      - name: Gate vs default.nnue (SPRT)
+        env:
+          GATE_ARGS: ${{ inputs.gate_args }}
+        run: bash scripts/nnue-cycle.sh gate --name "$NAME" --gate-args "$GATE_ARGS"
+      - name: Verdict
+        id: verdict
+        run: |
+          log="$NNUE_DATA_DIR/$NAME-gate.log"
+          {
+            echo "### NNUE gate: $NAME"
+            echo '```'
+            grep -E '== NNUE GATE|RESULT:|pairs=' "$log" | sed 's/^ *//'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if grep -q 'RESULT: PASSED' "$log"; then echo "passed=true" >> "$GITHUB_OUTPUT"; else echo "passed=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.name }}-gate
+          path: |
+            ${{ env.NNUE_DATA_DIR }}/${{ inputs.name }}.nnue
+            ${{ env.NNUE_DATA_DIR }}/${{ inputs.name }}-gate.log
+          retention-days: 30
+
+  promote:
+    needs: gate
+    if: ${{ !cancelled() && inputs.promote && needs.gate.outputs.passed == 'true' }}
+    runs-on: [self-hosted, nnue]
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/nnue-setup
+      - name: Install as default.nnue
+        run: bash scripts/nnue-cycle.sh promote --name "$NAME"
+      - name: Push branch nnue/${{ inputs.name }}
+        run: |
+          result=$(grep -E 'RESULT:|pairs=' "$NNUE_DATA_DIR/$NAME-gate.log" | sed 's/^ *//')
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "nnue/$NAME"
+          git add engine/src/main/resources/nnue/
+          git commit -m "Promote $NAME NNUE" -m "$result"
+          git push --force origin "nnue/$NAME"
+          {
+            echo "### Promoted $NAME on branch nnue/$NAME"
+            echo "Compare: ${{ github.server_url }}/${{ github.repository }}/compare/${{ github.ref_name }}...nnue/$NAME"
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull
+      # requests". Without it this step fails but the branch above is still pushed.
+      - name: Open pull request
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          GATE_LOG: ${{ env.NNUE_DATA_DIR }}/${{ inputs.name }}-gate.log
+        with:
+          script: |
+            const fs = require('fs');
+            const name = process.env.NAME;
+            const lines = fs.readFileSync(process.env.GATE_LOG, 'utf8').split('\n')
+              .filter(l => /== NNUE GATE|RESULT:|pairs=/.test(l)).map(l => l.trim());
+            const { data: pr } = await github.rest.pulls.create({
+              ...context.repo,
+              head: `nnue/${name}`,
+              base: context.ref.replace('refs/heads/', ''),
+              title: `Promote ${name} NNUE`,
+              body: [
+                `Gate result from [run ${context.runId}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}):`,
+                '```', ...lines, '```',
+                'After merging: update `engine/src/main/resources/nnue/README.md` and deploy with `.\\deploy\\deploy-engine.ps1`.'
+              ].join('\n')
+            });
+            core.summary.addRaw(`Pull request: ${pr.html_url}\n`).write();

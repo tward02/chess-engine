@@ -130,6 +130,42 @@ class NnueTrainerTest {
         assertFalse("epoch 30/30" in log, log)
     }
 
+    @Test
+    fun `weight decay shrinks the weights and zero decay changes nothing`(@TempDir dir: Path) {
+        val lines = listOf(
+            "4k3/8/8/8/8/8/8/Q3K3 w - - 0 1;900;1",
+            "q3k3/8/8/8/8/8/8/4K3 w - - 0 1;-900;0",
+            "4k3/8/8/8/8/8/8/R3K3 b - - 0 1;500;1",
+            "r3k3/8/8/8/8/8/8/4K3 b - - 0 1;-500;0"
+        )
+        val data = dir.resolve("data.txt")
+        Files.write(data, List(20) { lines }.flatten())
+
+        fun train(name: String, decay: Float?) = NnueTrainer(
+            hiddenSize = 8, epochs = 20, seed = 1L, dedupe = false, batchSize = 8, threads = 2, patience = 0,
+            validationFraction = 0f, weightDecay = decay ?: 0f
+        ).train(data, dir.resolve(name))
+
+        val plain = train("plain.nnue", null)
+        val zero = train("zero.nnue", 0f)
+        val decayed = train("decayed.nnue", 10f)
+
+        assertTrue(
+            Files.readAllBytes(dir.resolve("plain.nnue")).contentEquals(Files.readAllBytes(dir.resolve("zero.nnue"))),
+            "decay=0 must train exactly like no decay"
+        )
+        fun sumSquares(w: FloatArray) = w.sumOf { (it * it).toDouble() }
+        assertTrue(sumSquares(decayed.ftWeights) < sumSquares(plain.ftWeights), "first-layer weights must shrink")
+        assertTrue(sumSquares(decayed.outWeights) < sumSquares(plain.outWeights), "output weights must shrink")
+        assertEquals(zero.hiddenSize, decayed.hiddenSize)
+
+        val evaluator = NnueEvaluator(decayed)
+        assertTrue(
+            evaluator.evaluate(ChessGame(Board.fromFEN("4k3/8/8/8/8/8/8/Q3K3 w - - 0 1"))) > 0,
+            "a decayed net must still learn which side is winning"
+        )
+    }
+
     private fun captureOutput(block: () -> Unit): String {
         val output = java.io.ByteArrayOutputStream()
         val original = System.out

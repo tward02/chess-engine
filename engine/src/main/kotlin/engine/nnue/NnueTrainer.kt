@@ -41,8 +41,13 @@ enum class LearningRateSchedule {
  * epoch, the output file always holds the epoch with the **best validation loss**, and training stops
  * after [patience] epochs without improvement.
  *
+ * [weightDecay] adds decoupled (AdamW-style) weight decay: each step shrinks the weights it updates
+ * by `rate * weightDecay` before the Adam step, pulling unused capacity back towards zero so a wide
+ * net generalises instead of memorising. It applies to weights only, never biases, and (like the
+ * Adam step) only to the first-layer columns the batch touched. 0 (the default) is plain Adam.
+ *
  * Run via `:engine:trainNnue`, with `-PnnueArgs="data=... out=... hidden=... epochs=... lr=...
- * minLr=... schedule=... batch=... threads=... patience=... blend=... val=... dedupe=..."`.
+ * minLr=... schedule=... batch=... threads=... patience=... blend=... val=... dedupe=... decay=..."`.
  */
 class NnueTrainer(
     private val hiddenSize: Int = 128,
@@ -65,13 +70,16 @@ class NnueTrainer(
     /** Where [LearningRateSchedule.COSINE] ends. */
     private val minLearningRate: Float = learningRate * 0.05f,
     /** Stop after this many epochs without a better validation loss; 0 never stops early. */
-    private val patience: Int = 3
+    private val patience: Int = 3,
+    /** Decoupled weight decay per unit of learning rate; 0 disables it. Typical values 1e-4..1e-2. */
+    private val weightDecay: Float = 0f
 ) {
     init {
         require(validationFraction in 0f..0.5f) { "validationFraction must be in 0..0.5" }
         require(batchSize >= 1) { "batchSize must be at least 1" }
         require(threads >= 1) { "threads must be at least 1" }
         require(patience >= 0) { "patience must be non-negative" }
+        require(weightDecay >= 0f) { "weightDecay must be non-negative" }
     }
 
     fun train(dataFile: Path, outFile: Path): NnueNetwork = train(listOf(dataFile), outFile)
@@ -99,6 +107,7 @@ class NnueTrainer(
             "Training: hidden=$hiddenSize epochs=$epochs lr=$learningRate schedule=${schedule.name.lowercase()}" +
                     "${if (schedule == LearningRateSchedule.COSINE) " minLr=$minLearningRate" else ""} " +
                     "batch=$batchSize threads=$workerCount blend=$resultBlend seed=$seed " +
+                    "${if (weightDecay > 0f) "decay=$weightDecay " else ""}" +
                     "train=${training.size} validation=${validation.size}"
         )
 
@@ -242,12 +251,12 @@ class NnueTrainer(
             for (h in 0 until hidden) {
                 var biasGrad = 0f
                 for (worker in workers) { biasGrad += worker.ftBiasGrad[h]; worker.ftBiasGrad[h] = 0f }
-                adam(net.ftBias, mFtB, vFtB, h, biasGrad * scale)
+                adam(net.ftBias, mFtB, vFtB, h, biasGrad * scale, decay = false)
             }
             for (j in 0 until 2 * hidden) {
                 var outGrad = 0f
                 for (worker in workers) { outGrad += worker.outGrad[j]; worker.outGrad[j] = 0f }
-                adam(net.outWeights, mOut, vOut, j, outGrad * scale)
+                adam(net.outWeights, mOut, vOut, j, outGrad * scale, decay = true)
             }
             var outBiasGrad = 0f
             for (worker in workers) { outBiasGrad += worker.outBiasGrad; worker.outBiasGrad = 0f }
@@ -265,12 +274,13 @@ class NnueTrainer(
                 for (h in base until base + hidden) {
                     var grad = 0f
                     for (worker in workers) { grad += worker.ftGrad[h]; worker.ftGrad[h] = 0f }
-                    adam(weights, mFt, vFt, h, grad * scale)
+                    adam(weights, mFt, vFt, h, grad * scale, decay = true)
                 }
             }
         }
 
-        fun adam(params: FloatArray, m: FloatArray, v: FloatArray, i: Int, grad: Float) {
+        fun adam(params: FloatArray, m: FloatArray, v: FloatArray, i: Int, grad: Float, decay: Boolean) {
+            if (decay && weightDecay > 0f) params[i] -= rate * weightDecay * params[i]
             m[i] = BETA1 * m[i] + (1f - BETA1) * grad
             v[i] = BETA2 * v[i] + (1f - BETA2) * grad * grad
             params[i] -= rate * (m[i] / correction1) / (sqrt(v[i] / correction2) + EPSILON)
@@ -427,7 +437,8 @@ fun main(args: Array<String>) {
         threads = opts["threads"]?.toInt() ?: Runtime.getRuntime().availableProcessors(),
         schedule = opts["schedule"]?.let { LearningRateSchedule.valueOf(it.uppercase()) } ?: LearningRateSchedule.COSINE,
         minLearningRate = opts["minLr"]?.toFloat() ?: (learningRate * 0.05f),
-        patience = opts["patience"]?.toInt() ?: 3
+        patience = opts["patience"]?.toInt() ?: 3,
+        weightDecay = opts["decay"]?.toFloat() ?: 0f
     )
     println("Training NNUE: data=$data out=$out")
     trainer.train(data, out)
