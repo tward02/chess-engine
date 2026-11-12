@@ -11,7 +11,8 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted
+    # Only this repo's own runner (not the org runner, nor the NNUE runner busy with hours-long cycles).
+    runs-on: [self-hosted, chess-engine]
     timeout-minutes: 30
 
     steps:
@@ -30,9 +31,10 @@ jobs:
         run: ./gradlew compileKotlin --console=plain
 
       # Every module's test task; :engine:test excludes @LongRunning (perft depths, gates, A/B runs).
-      # xvfb gives the Compose UI tests (desktop/client/ui) a display.
+      # xvfb gives the Compose UI tests (desktop/client/ui) a display. --continue runs every module's
+      # tests even after one fails, so a single run reports all the failures.
       - name: Test
-        run: xvfb-run --auto-servernum ./gradlew test --console=plain
+        run: xvfb-run --auto-servernum ./gradlew test --continue --console=plain
 
       - name: Upload test reports
         if: failure()
